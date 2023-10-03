@@ -1,6 +1,6 @@
 # README file
 
-## Please refer to the `Versatile_Emission_Line_Fitting_Package_Guideline.pdf` in the `documents` folder for more details. Below are the key steps for installation and execution. 
+### Please refer to the `Versatile_Emission_Line_Fitting_Package_Guideline.pdf` in the `documents` folder for more details. Below are the key steps for installation and execution. 
 
 ## Installation
 
@@ -75,7 +75,7 @@ region.all_lines_result(wave, spec, err, n_iteration = 1000, get_flux = True, ge
                         get_ew = True, save_ew_table = True, get_error = True, save_par_table = True)
 
 ```
-Users can select the intended lines for fitting either by using the line-selection GUI (line_select_method = `gui`) or by inputting a text file (line_select_method = `txt`). Another GUI will appear for users to input the initial guess and range for each parameter.
+Users can select the intended lines for fitting either by using the line-selection GUI (`line_select_method = gui`) or by inputting a text file (`line_select_method = txt`). Another GUI will appear for users to input the initial guess and range for each parameter.
 
 
 **Saved Results:**
