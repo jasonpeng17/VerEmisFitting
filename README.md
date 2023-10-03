@@ -1,6 +1,6 @@
 # README file
 
-# Please refer to the `Versatile_Emission_Line_Fitting_Package_Guideline.pdf` in the `documents` folder for more details. Below are the key steps for installation and execution. 
+## Please refer to the `Versatile_Emission_Line_Fitting_Package_Guideline.pdf` in the `documents` folder for more details. Below are the key steps for installation and execution. 
 
 ## Installation
 
