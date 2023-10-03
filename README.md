@@ -55,9 +55,6 @@ redshift = 0.01287
 # Whether the spectrum is in "vacuum" or "air" wavelength space
 vac_or_air = 'vac'
 
-# whether the spectrum is in "vacuum" or "air" wavelength space
-vac_or_air = 'vac'
-
 # run the fitting result for each selected line profile
 # "n_iteration = 1000" defines the number of iterations you want to run
 # "get_flux = True" defines if you want the return to be the flux dict (includes the flux of each line profile) or not; if False, then the return is the best-fitting parameters
