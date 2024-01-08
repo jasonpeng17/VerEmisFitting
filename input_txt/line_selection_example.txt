@@ -1,10 +1,11 @@
 # example input file: selecting lines for fitting
 
-# lines available for fitting (current version)
-# 'H delta' 'H gamma' 'H beta' 'H alpha' 'H nu' 'H kappa' 'H iota'
+# lines available for fitting should match with vac_wavelengths.txt, air_wavelengths.txt, and default_window_vspace.txt in doc folder
+# example valid input line names are shown below:
+# 'H delta' 'H gamma' 'H beta' 'H alpha' 
 # '[OII]&[OII] 3726&3729' '[OIII]&HeI 5007&5015' '[NII]&H&[NII] 6548&alpha&6583' '[SII]&[SII] 6716&6731'
 # '[OIII] 4363' '[OIII] 4959' '[OIII] 5007' '[OI] 6300'
-# 'HeII 4686' 'HeI 5015' '[ArIV]&HeI 4711&4713' '[ArIV] 4711' '[ArIV] 4740'
+# 'HeII 4686' '[ArIV]&HeI 4711&4713' '[ArIV] 4711' '[ArIV] 4740'
 
 ######################### Line Selection Keywords
 # selected lines (needs quotation marks for the selected lines)
@@ -22,6 +23,9 @@ double_gauss_lines = None
 
 # lines that need triple-Gaussian fittings (needs quotation marks for the selected lines); if no lines have multiple emission components, input None.
 triple_gauss_lines = '[OIII] 4959'
+
+# lines that need a Lorentzian function for fitting broad wings ("core" is fitted by Gaussians by default)
+lorentz_bw_lines = None
 
 # whether the double or triple Gaussian fittings have broad wings or not
 double_gauss_broad = True # sigma_2 > sigma_1

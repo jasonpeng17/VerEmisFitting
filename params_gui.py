@@ -1,7 +1,8 @@
 ### GUI for users to input the initial guess and range value for each parameter
 
 import tkinter as tk
-from tkinter import ttk
+# from tkinter import ttk
+import ttkbootstrap as ttk
 import tkinter.font as font
 from tkinter import messagebox
 from matplotlib.backends.backend_tkagg import (
@@ -90,11 +91,11 @@ class FitParamsWindow(tk.Tk):
         self.params_dict = {}
         self.params_range_dict = {}
 
-        self.guess_window = tk.Toplevel(self)
+        self.guess_window = ttk.Toplevel(self)
         self.guess_window.title("Input Initial Guess for each Parameter")
 
         # Create a Label widget for the message
-        self.guess_message = tk.Label(self.guess_window, text="Notice: the units for the inputs of 'center_{}' and 'sigma_{}' are in km/s. \
+        self.guess_message = ttk.Label(self.guess_window, text="Notice: the units for the inputs of 'center_{}' and 'sigma_{}' are in km/s. \
                                                                The inputs for all amplitudes, 'amp_{}' are in units of the maximum of the line flux array, max(flux_v_arr), e.g., 0.5 means 0.5 * max(flux_v_arr).",
                                       font=self.font_txt_tuple, wraplength=500, justify=tk.LEFT)
         self.guess_message.grid(row=0, column=0, sticky='w')
@@ -105,7 +106,7 @@ class FitParamsWindow(tk.Tk):
         self.range_window = None
 
         # Create a new frame to contain all the widgets that were directly in guess_window
-        content_frame = tk.Frame(self.guess_window)
+        content_frame = ttk.Frame(self.guess_window)
         content_frame.grid(row=1, column=0, sticky='nsew')
 
         # Emission component
@@ -149,14 +150,14 @@ class FitParamsWindow(tk.Tk):
             self.guess_row = 1
 
         # button for fixing the ratio between two amplitudes
-        ratio_button_frame = tk.Frame(self.guess_window)
+        ratio_button_frame = ttk.Frame(self.guess_window)
         ratio_button_frame.grid(row=2, column=0, sticky='ew')
-        tk.Button(ratio_button_frame, text="Set Amplitude Ratio", command=self.create_ratio_window).pack(side='bottom')
+        ttk.Button(ratio_button_frame, text="Set Amplitude Ratio", command=self.create_ratio_window, bootstyle= 'default').pack(side='bottom')
 
         # button for saving the enter input        
-        button_frame = tk.Frame(self.guess_window)
+        button_frame = ttk.Frame(self.guess_window)
         button_frame.grid(row=3, column=0, sticky='ew')
-        tk.Button(button_frame, text="Save", command=self.save_params).pack()
+        ttk.Button(button_frame, text="Save", command=self.save_params, bootstyle= 'success').pack()
 
         self.guess_window.protocol("WM_DELETE_WINDOW", self.stop_mainloop)
 
@@ -216,11 +217,11 @@ class FitParamsWindow(tk.Tk):
             self.range_row = 1
 
     def create_range_window(self):
-        self.range_window = tk.Toplevel(self)
+        self.range_window = ttk.Toplevel(self)
         self.range_window.title("Input Range Size for each Parameter")
 
         # Create a Label widget for the message
-        self.range_message = tk.Label(self.range_window, text="Notice: the units for the inputs of 'center_{}' and 'sigma_{}' are in km/s. \
+        self.range_message = ttk.Label(self.range_window, text="Notice: the units for the inputs of 'center_{}' and 'sigma_{}' are in km/s. \
                                                                The inputs for all amplitudes, 'amp_{}' are in units of the maximum of the line flux array, max(flux_v_arr), e.g., 0.5 means 0.5 * max(flux_v_arr).", 
                                                                font=self.font_txt_tuple, wraplength=500, justify=tk.LEFT)
         self.range_message.grid(row=0, column=0, sticky='w')
@@ -228,7 +229,7 @@ class FitParamsWindow(tk.Tk):
         self.range_column = 0
         self.range_row = 0
 
-        content_frame = tk.Frame(self.range_window)
+        content_frame = ttk.Frame(self.range_window)
         content_frame.grid(row=1, column=0, sticky='nsew')
 
         if self.selected_lines:
@@ -267,21 +268,21 @@ class FitParamsWindow(tk.Tk):
             self.range_column += 1
             self.range_row = 1
 
-        button_frame = tk.Frame(self.range_window)
+        button_frame = ttk.Frame(self.range_window)
         button_frame.grid(row=2, column=0, sticky='ew')
         
-        tk.Button(button_frame, text="Save", command=self.save_ranges).pack(side='bottom')
+        ttk.Button(button_frame, text="Save", command=self.save_ranges, bootstyle = 'success').pack(side='bottom')
 
         self.range_window.protocol("WM_DELETE_WINDOW", self.stop_mainloop)
 
     def create_ratio_window(self):
-        self.ratio_window = tk.Toplevel(self)
+        self.ratio_window = ttk.Toplevel(self)
         self.ratio_window.title("Set Amplitude Ratios")
 
         self.amplitude_options = list(self.params_dict.keys())
         self.amplitude_options = [amp for amp in self.amplitude_options if 'amp_' in amp]
 
-        self.amplitude_combos_container = tk.Frame(self.ratio_window)
+        self.amplitude_combos_container = ttk.Frame(self.ratio_window)
         self.amplitude_combos_container.grid(row=0, column=0, columnspan=4)
 
         # List to track created rows
@@ -290,48 +291,58 @@ class FitParamsWindow(tk.Tk):
         # Initialize with one row of comboboxes
         self.add_combo_row()
 
-        self.add_button = tk.Button(self.ratio_window, text="Add", command=self.add_combo_row)
+        self.add_button = ttk.Button(self.ratio_window, text="Add", command=self.add_combo_row, bootstyle = 'primary')
         self.add_button.grid(row=1, column=0, columnspan=2)
 
         # Delete button to remove the last added row
-        self.delete_button = tk.Button(self.ratio_window, text="Delete", command=self.delete_combo_row)
+        self.delete_button = ttk.Button(self.ratio_window, text="Delete", command=self.delete_combo_row, bootstyle = 'primary')
         self.delete_button.grid(row=1, column=2, columnspan=2)
 
-        self.save_button = tk.Button(self.ratio_window, text="Save Ratios", command=self.save_ratios)
-        self.save_button.grid(row=2, column=0, columnspan=4)
+        self.save_button = ttk.Button(self.ratio_window, text="Save Ratios", command=self.save_ratios, bootstyle = 'success')
+        self.save_button.grid(row=2, column=0, columnspan=2)
+
+        # Quit button to close the window without saving
+        self.quit_button = ttk.Button(self.ratio_window, text="Quit Without Saving", command=self.quit_ratio_window, bootstyle = 'danger')
+        self.quit_button.grid(row=2, column=2, columnspan=2)
 
         self.ratio_window.protocol("WM_DELETE_WINDOW", self.stop_mainloop)
 
     def add_combo_row(self):
-        row_frame = tk.Frame(self.amplitude_combos_container)
+        """Add a row in the self.create_ratio_window."""
+        row_frame = ttk.Frame(self.amplitude_combos_container)
         
         # Append this frame to the rows list
         self.rows.append(row_frame)
 
         # Drop-down menu for the first amplitude:
-        amp1_combo = ttk.Combobox(row_frame, values=self.amplitude_options)
+        amp1_combo = ttk.Combobox(row_frame, values=self.amplitude_options, style='info.TCombobox', foreground='black')
         amp1_combo.grid(row=0, column=0)
 
         # Label for the divide sign
         tk.Label(row_frame, text="/").grid(row=0, column=1)
 
         # Drop-down menu for the second amplitude:
-        amp2_combo = ttk.Combobox(row_frame, values=self.amplitude_options)
+        amp2_combo = ttk.Combobox(row_frame, values=self.amplitude_options, style='info.TCombobox', foreground='black')
         amp2_combo.grid(row=0, column=2)
 
         # Label for the equals sign
-        tk.Label(row_frame, text="=").grid(row=0, column=3)
+        ttk.Label(row_frame, text="=").grid(row=0, column=3)
 
         # Entry field for the ratio:
-        ratio_entry = tk.Entry(row_frame)
+        ratio_entry = ttk.Entry(row_frame)
         ratio_entry.grid(row=0, column=4)
 
         row_frame.pack(pady=5)
 
     def delete_combo_row(self):
+        """Delete a row in the self.create_ratio_window."""
         if self.rows:
             last_row = self.rows.pop()
             last_row.destroy()
+
+    def quit_ratio_window(self):
+        """Close the ratio window without saving any ratios."""
+        self.ratio_window.destroy()
 
     def extract_key_part(self, amp):
         parts = amp.split('_')

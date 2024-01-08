@@ -1,10 +1,12 @@
-# this file is for running the line-fitting models and plot the best-fitting results 
+# This file is for users to check the fitted continuum levels and plot their own best-fitting figures.
+
 import numpy as np
 from astropy.io import fits
 import os, sys
 from line_fitting_exec import *
 from line_fitting_model import *
 
+#################### Copy from run_line_fitting.py
 # define the absolute path of the current working directory
 current_direc = os.getcwd() 
 
@@ -26,8 +28,8 @@ fit_cont_order = 1
 input_example_txt = current_direc + '/input_txt/line_selection_example.txt' # text file for selecting intended lines for fitting
 # whether to interactively determine the fitting window, local continuum regions, and masking lines 
 fit_window_gui = True # if False, use the default values 
-region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_name = data_fits, line_select_method = 'gui', 
-                           input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui)
+fit_result = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_name = data_fits, line_select_method = 'gui', 
+                               input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui)
 
 # "n_iteration = 1000" defines the number of iterations you want to run
 # "get_flux = True" defines if you want the return to be the flux dict (includes the flux of each line profile) or not; if False, then the return is the best-fitting parameters
@@ -36,8 +38,30 @@ region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_na
 # "save_flux_table = True" defines if you want to save the best-fitting flux pandas table for each line.
 # "save_ew_table = True" defines if you want to save the best-fitting equivalent width pandas table for each line.
 # "save_sigma_table = True" defines if you want to save the best-fitting velocity width pandas table for each velocity component.
-region.all_lines_result(wave, spec, err, n_iteration = 1000, get_flux = True, save_flux_table = True, get_ew = True, save_ew_table = True, get_error = True, save_par_table = True)
+fit_result.all_lines_result(wave, spec, err, n_iteration = 1000, get_flux = True, save_flux_table = True, get_ew = True, save_ew_table = True, get_error = True, save_par_table = True)
 
 # plot the fitting result
 # "savefig = True" defines if you want to save the fitting result as a .pdf file.
-region.fitting_plot(savefig = True)
+fit_result.fitting_plot(savefig = True)
+#################### 
+
+# Step (1): check the fitting window and the local continuum regions in the cont_dir folder
+# The fitting window and local continuum region information will be saved to the `cont_dir` folder as a `.cont` file, specifying four boundary points in Angstroms: `x1` (lower-end of the fitting window), 
+# `x2` (upper-end of the fitting window), `x3` (upper-end of the left local continuum region), and `x4` (lower-end of the right local continuum region). 
+# These define the local continuum regions asx1 - x3 and x4 - x2.
+
+# Step (2): check the masked regions in the lmsk_dir folder
+# Each line (with two boundary points in Angstroms) defining a region to be masked during fitting.
+
+# Step (3): print the fitted continuum level directory (contains the fitted continuum level for each line)
+print(fit_result.cont_line_dict)
+
+# Step (4): check the best-fitting parameter values in the parameter_tables folder.
+
+# Step (5): plot your own best-fitting figures!
+
+
+
+
+
+

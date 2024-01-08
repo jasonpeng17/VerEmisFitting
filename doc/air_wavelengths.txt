@@ -1,0 +1,58 @@
+# Air Wavelengths Data File
+# This file contains a list of ion names and their associated wavelengths in air.
+# Each line in the file represents a specific ion or a group of ions (multiplet).
+#
+# FORMAT:
+# Line Name: Wavelength(s)
+#
+# Where:
+# - Ion Name is the name of the ion or the group of ions.
+# - Wavelength(s) are the associated wavelength values. 
+#   For multiple wavelengths (as in the case of multiplets), values are separated by spaces.
+#
+# Example:
+# H delta: 4101.76  # This line indicates that the line 'H delta' has a wavelength of 4101.76 Angstroms.
+# [OII]&[OII] 3726&3729: 3726.03 3728.82  # This line indicates that the multiplet '[OII]&[OII] 3726&3729' has wavelengths 3726.03 and 3728.82 Angstroms.
+#
+# Users can modify this file by adding new lines or editing existing ones following the format provided.
+# Comments can be added to any line by starting the line with a '#'.
+
+<Hydrogen>
+H delta: 4101.76
+H gamma: 4340.47
+H beta: 4861.33
+H alpha: 6562.8
+
+<Oxygen>
+[OI] 6300: 6300.3
+[OII]&[OII] 3726&3729: 3726.03 3728.82
+[OIII] 4363: 4363.21
+[OIII] 4959: 4958.92
+[OIII] 5007: 5006.84
+[OIII]&[OIII]&HeI 4959&5007&5015: 4958.92 5006.84 5015.6776
+[OIII]&HeI 5007&5015: 5006.84 5015.6776
+
+<Nitrogen>
+[NII] 5755: 5754.64
+[NII]&H&[NII] 6548&alpha&6583: 6548.03 6562.8 6583.41
+
+<Sulphur>
+[SII]&[SII] 6716&6731: 6716.47 6730.85
+[SIII] 6312: 6312.1
+[SIII] 9069: 9068.6
+[SIII] 9531: 9530.6
+
+<Helium>
+HeII 4686: 4685.68
+
+<Argon>
+[ArIII] 7136: 7135.8
+[ArIV] 4711: 4711.35
+[ArIV] 4740: 4740.2
+[ArIV]&HeI 4711&4713: 4711.35 4713.1392
+
+<Iron>
+[FeIII] 4734: 4733.93
+[FeIII] 4755: 4754.83
+[FeIII] 4770: 4769.60
+[FeIII] 4778: 4777.88

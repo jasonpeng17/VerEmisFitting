@@ -17,7 +17,8 @@ from astropy.stats import sigma_clip, sigma_clipped_stats
 from termcolor import colored
 
 from line_fitting_exec import *
-from line_fitting_prelim import *
+from modeling_utils import *
+from analysis_utils import split_multilet_line
 from IPython import embed
 
 class line_fitting_model():
@@ -141,7 +142,13 @@ class line_fitting_model():
                             if num_comp_second == 3:
                                 params_line += self.get_broad_amp(params, num_comp_second, multilet_lines[1], "2", with_amp_in_key = True)
                         # append the line residual to the residual dict
-                        residuals_all.append(residual_2p_v_c_doublet(params_line, x, x2, y, yerr, num_comp_first=num_comp_first, num_comp_second=num_comp_second))
+                        # whether use the lorentzian function to fit broad wings or not
+                        if ((multilet_lines[0] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[0]] == 'Lorentzian') or \
+                           ((multilet_lines[1] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[1]] == 'Lorentzian'):
+                            residuals_all.append(residual_2p_gl_v_c_doublet(params_line, x, x2, y, yerr, num_comp_first=num_comp_first, num_comp_second=num_comp_second))
+
+                        else:
+                            residuals_all.append(residual_2p_v_c_doublet(params_line, x, x2, y, yerr, num_comp_first=num_comp_first, num_comp_second=num_comp_second))
 
                     # Triple line profiles
                     if len(multilet_lines) == 3:
@@ -158,8 +165,15 @@ class line_fitting_model():
                             if num_comp_third == 3:
                                 params_line += self.get_broad_amp(params, num_comp_third, multilet_lines[2], "2", with_amp_in_key = True)
                         # append the line residual to the residual dict
-                        residuals_all.append(residual_3p_v_c_triplet(params_line, x, x2, x3, y, yerr, 
-                                             num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third))
+                        # whether use the lorentzian function to fit broad wings or not
+                        if ((multilet_lines[0] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[0]] == 'Lorentzian') or \
+                           ((multilet_lines[1] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[1]] == 'Lorentzian') or \
+                           ((multilet_lines[2] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[2]] == 'Lorentzian'):
+                            residuals_all.append(residual_3p_gl_v_c_triplet(params_line, x, x2, x3, y, yerr, 
+                                                 num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third))
+                        else:
+                            residuals_all.append(residual_3p_v_c_triplet(params_line, x, x2, x3, y, yerr, 
+                                                 num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third))
 
             # single line profile
             else:
@@ -175,12 +189,18 @@ class line_fitting_model():
                     if line in double_gauss_lines:
                         broad_amps = [params[f"amp_{line.split(' ')[1]}_b"]]
                         params_line = [x0_e, x0_b, sigma_e, sigma_b] + amps + broad_amps
-                        residuals_all.append(residual_2p_v_c(params_line, x, y, yerr))
+                        if (line in self.fit_func_choices.keys()) and (self.fit_func_choices[line] == 'Lorentzian'):
+                            residuals_all.append(residual_2p_gl_v_c(params_line, x, y, yerr))
+                        else:
+                            residuals_all.append(residual_2p_v_c(params_line, x, y, yerr))
                     # triple emission components
                     if line in triple_gauss_lines:
                         broad_amps = [params[f"amp_{line.split(' ')[1]}_b"]] + [params[f"amp_{line.split(' ')[1]}_b2"]]
                         params_line = [x0_e, x0_b, x0_b2, sigma_e, sigma_b, sigma_b2] + amps + broad_amps
-                        residuals_all.append(residual_3p_v_c(params_line, x, y, yerr))
+                        if (line in self.fit_func_choices.keys()) and (self.fit_func_choices[line] == 'Lorentzian'):
+                            residuals_all.append(residual_3p_gl_v_c(params_line, x, y, yerr))
+                        else:
+                            residuals_all.append(residual_3p_v_c(params_line, x, y, yerr))
                 # emission + absorption components
                 if (line in absorption_lines):
                     abs_amps = [params[f"amp_{line.split(' ')[1]}_abs"]]
@@ -248,7 +268,7 @@ class line_fitting_model():
                 self.best_params = np.append(self.best_params, [x0_b2, sigma_b2] + [amps[line.split(' ')[1]+'_b2'] for line in self.triple_gauss_lines])
         
         # print the best chi2 and best parameter values of the current iteration (which satisfies the conditions above)
-        print(colored(f"Iteration #{self.current_iteration}: ", 'green', attrs=['bold', 'underline']))
+        print(colored(f"\nIteration #{self.current_iteration}: ", 'green', attrs=['bold', 'underline']))
         print(colored("The current best chi2 value is ", 'green'))
         print("{0:.5f}".format(self.best_chi2))
         print(colored("The current best parameter values are ", 'green'))
@@ -343,7 +363,7 @@ class line_fitting_model():
         """
         # fit all intended emission lines in the velocity space
         velocity_dict, flux_v_dict, err_v_dict, initial_guess_dict, param_range_dict, amps_ratio_dict, self.absorption_lines, self.broad_wings_lines, \
-        self.double_gauss_lines, self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, fitting_method = input_arr
+        self.double_gauss_lines, self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, fitting_method, self.fit_func_choices = input_arr
 
         # get a copy of the initial guess dict
         initial_guess_dict_old = initial_guess_dict.copy()
@@ -368,15 +388,15 @@ class line_fitting_model():
             self.params = Parameters()
             # velocity center and width of the narrow emission component
             self.params.add('center_e', value=initial_guess_dict['v_e'][0], vary = True)
-            self.params.add('sigma_e', value=initial_guess_dict['v_e'][1], min = 0, max = 200, vary = True)
+            self.params.add('sigma_e', value=initial_guess_dict['v_e'][1], min = 30, max = 200, vary = True)
             for component in ['b', 'b2', 'a']:
                 # define a max sigma value 
-                sigma_max = 900 if component == 'a' else 900
+                sigma_max = 1500 if component == 'a' else 1200
                 # set initial values only for other velocity info
                 if f'v_{component}' in initial_guess_dict:
                     self.params.add(f"center_{component}", value=initial_guess_dict[f'v_{component}'][0],
                                     expr=f"center_e" if not vary_dict[component][0] else None)
-                    self.params.add(f"sigma_{component}", value=initial_guess_dict[f'v_{component}'][1], min=0, max=sigma_max, 
+                    self.params.add(f"sigma_{component}", value=initial_guess_dict[f'v_{component}'][1], min=30, max=sigma_max, 
                                     expr=f"sigma_e" if not vary_dict[component][1] else None)
 
             # set initial values only for amplitude info (free amplitude fitting)
@@ -389,7 +409,7 @@ class line_fitting_model():
                         if indx_num % 2 != 0:
                             amp_ratio_indx = int((indx_num + 1) / 2 - 1)
                             amp_ratio = self.amps_ratio_list[indx_num - 1] # fixed amp ratio between these two lines
-                            self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0]) # first line 
+                            self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0], min = 0) # first line 
                             self.params.add(f"amp_{self.amps_fixed_list[indx_num - 1]}", expr = f"{amp_ratio} * amp_{ion_wave_split[1]}") # second line
 
                         if (line in self.broad_wings_lines):
@@ -399,10 +419,10 @@ class line_fitting_model():
                                 if indx_num_b % 2 != 0:
                                     amp_ratio_b_indx = int((indx_num_b + 1) / 2 - 1)
                                     amp_ratio_b = self.amps_ratio_list[amp_ratio_b_indx] # fixed amp ratio between these two lines
-                                    self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1]) # first line 
+                                    self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1], min = 0) # first line 
                                     self.params.add(f"amp_{self.amps_fixed_list[indx_num_b - 1]}", expr=f"{amp_ratio_b} * amp_{ion_wave_split[1]}_b") # second line
                             else:
-                                self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1])
+                                self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1], min = 0)
                                 
                         if (line in self.triple_gauss_lines):
                             # check whether the lines' third velocity component has fixed ratio or not
@@ -411,20 +431,20 @@ class line_fitting_model():
                                 if indx_num_b2 % 2 != 0:
                                     amp_ratio_b2_indx = int((indx_num_b2 + 1) / 2 - 1)
                                     amp_ratio_b2 = self.amps_ratio_list[amp_ratio_b2_indx] # fixed amp ratio between these two lines
-                                    self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2]) # first line 
+                                    self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2], min = 0) # first line 
                                     self.params.add(f"amp_{self.amps_fixed_list[indx_num_b2 - 1]}", expr = f"{amp_ratio_b2} * amp_{ion_wave_split[1]}_b2") # second line
                             else:
-                                self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2])
+                                self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2], min = 0)
 
                     # lines that follow free amplitude fitting strategy
                     if ion_wave_split[1] not in self.amps_fixed_list:
-                        self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0])
+                        self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0], min = 0)
                         if line in self.broad_wings_lines:
-                            self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1])
+                            self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1], min = 0)
                             if line in self.triple_gauss_lines:
-                                self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2])
+                                self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2], min = 0)
                         if line in self.absorption_lines:
-                            self.params.add(f"amp_{ion_wave_split[1]}_abs", value=initial_guess[1])
+                            self.params.add(f"amp_{ion_wave_split[1]}_abs", value=initial_guess[1], min = 0)
 
             # obtain the best result of this iteration
             self.result = minimize(self.residual_v_f_all, self.params, args=(velocity_dict, flux_v_dict, err_v_dict, self.absorption_lines, self.broad_wings_lines, 
@@ -490,9 +510,16 @@ class line_fitting_model():
                                 if num_comp_second == 3:
                                     params_line += self.get_broad_amp(self.amps, num_comp_second, multilet_lines[1], "2")
                             # append the line model to the model dict
-                            model_dict[multilet_lines[0]], model_dict[multilet_lines[1]], model_dict[line] = \
-                            gaussian_2p_v_doublet(params_line, velocity_dict[line][0], velocity_dict[line][1], 
-                                                  num_comp_first=num_comp_first, num_comp_second=num_comp_second)
+                            # whether use the lorentzian function to fit broad wings or not
+                            if ((multilet_lines[0] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[0]] == 'Lorentzian') or \
+                               ((multilet_lines[1] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[1]] == 'Lorentzian'):
+                                model_dict[multilet_lines[0]], model_dict[multilet_lines[1]], model_dict[line] = \
+                                gaussian_lorentzian_2p_v_doublet(params_line, velocity_dict[line][0], velocity_dict[line][1], 
+                                                                 num_comp_first=num_comp_first, num_comp_second=num_comp_second)
+                            else:
+                                model_dict[multilet_lines[0]], model_dict[multilet_lines[1]], model_dict[line] = \
+                                gaussian_2p_v_doublet(params_line, velocity_dict[line][0], velocity_dict[line][1], 
+                                                      num_comp_first=num_comp_first, num_comp_second=num_comp_second)
 
                         # Triple line profiles
                         if len(multilet_lines) == 3:
@@ -508,10 +535,19 @@ class line_fitting_model():
                                     params_line += self.get_broad_amp(self.amps, num_comp_second, multilet_lines[1], "2")
                                 if num_comp_third == 3:
                                     params_line += self.get_broad_amp(self.amps, num_comp_third, multilet_lines[2], "2")
-                            # append the line model to the model dict
-                            model_dict[multilet_lines[0]], model_dict[multilet_lines[1]], model_dict[multilet_lines[2]], model_dict[line] = \
-                            gaussian_3p_v_triplet(params_line, velocity_dict[line][0], velocity_dict[line][1], velocity_dict[line][2],
-                                                  num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third)
+                            # whether use the lorentzian function to fit broad wings or not
+                            if ((multilet_lines[0] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[0]] == 'Lorentzian') or \
+                               ((multilet_lines[1] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[1]] == 'Lorentzian') or \
+                               ((multilet_lines[2] in self.fit_func_choices.keys()) and self.fit_func_choices[multilet_lines[2]] == 'Lorentzian'):
+                                # append the line model to the model dict
+                                model_dict[multilet_lines[0]], model_dict[multilet_lines[1]], model_dict[multilet_lines[2]], model_dict[line] = \
+                                gaussian_lorentzian_3p_v_triplet(params_line, velocity_dict[line][0], velocity_dict[line][1], velocity_dict[line][2],
+                                                                 num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third)
+                            else:
+                                # append the line model to the model dict
+                                model_dict[multilet_lines[0]], model_dict[multilet_lines[1]], model_dict[multilet_lines[2]], model_dict[line] = \
+                                gaussian_3p_v_triplet(params_line, velocity_dict[line][0], velocity_dict[line][1], velocity_dict[line][2],
+                                                      num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third)
 
                 # for single line profile
                 else:
@@ -522,12 +558,20 @@ class line_fitting_model():
                     elif (line not in self.absorption_lines) and (line in self.broad_wings_lines):
                         # double emission components
                         if line in self.double_gauss_lines:
-                            model_dict[line] = gaussian_2p_v(velocity_dict[line], x0_e, x0_b, sigma_e, sigma_b, 
-                                                             self.amps[line.split(' ')[1]], self.amps[line.split(' ')[1]+'_b'])
+                            if (line in self.fit_func_choices.keys()) and (self.fit_func_choices[line] == 'Lorentzian'):
+                                model_dict[line] = gaussian_lorentz_2p_v(velocity_dict[line], x0_e, x0_b, sigma_e, sigma_b, 
+                                                                         self.amps[line.split(' ')[1]], self.amps[line.split(' ')[1]+'_b'])
+                            else:
+                                model_dict[line] = gaussian_2p_v(velocity_dict[line], x0_e, x0_b, sigma_e, sigma_b, 
+                                                                 self.amps[line.split(' ')[1]], self.amps[line.split(' ')[1]+'_b'])
                         # triple emission components
                         if line in self.triple_gauss_lines:
-                            model_dict[line] = gaussian_3p_v(velocity_dict[line], x0_e, x0_b, x0_b2, sigma_e, sigma_b, sigma_b2,
-                                                             self.amps[line.split(' ')[1]], self.amps[line.split(' ')[1]+'_b'], self.amps[line.split(' ')[1]+'_b2'])
+                            if (line in self.fit_func_choices.keys()) and (self.fit_func_choices[line] == 'Lorentzian'):
+                                model_dict[line] = gaussian_lorentz_3p_v(velocity_dict[line], x0_e, x0_b, x0_b2, sigma_e, sigma_b, sigma_b2,
+                                                                         self.amps[line.split(' ')[1]], self.amps[line.split(' ')[1]+'_b'], self.amps[line.split(' ')[1]+'_b2'])
+                            else:
+                                model_dict[line] = gaussian_3p_v(velocity_dict[line], x0_e, x0_b, x0_b2, sigma_e, sigma_b, sigma_b2,
+                                                                 self.amps[line.split(' ')[1]], self.amps[line.split(' ')[1]+'_b'], self.amps[line.split(' ')[1]+'_b2'])
                     # emission + absorption components
                     elif (line in self.absorption_lines) and (line not in self.broad_wings_lines):
                         model_dict[line] = gaussian_lorentz_2p_v(velocity_dict[line], x0_e, x0_a, sigma_e, sigma_a, 

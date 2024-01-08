@@ -1,0 +1,52 @@
+# Default fitting window and local continuum regions
+# This file contains a list of ion names and their associated half velocity width of line-fitting window.
+# Each line in the file represents a specific ion or a group of ions (multiplet).
+#
+# FORMAT:
+# Line Name: half velocity width of line-fitting window
+#
+# Example:
+# H delta: 1000 # This line indicates that the line 'H delta' has a half velocity width of the line-fitting window of 1000 km/s (or equivalently, a total velocity width of 2000 km/s)
+#
+# Users can modify this file by adding new lines or editing existing ones following the format provided.
+# Comments can be added to any line by starting the line with a '#'.
+
+# Hydrogen
+H delta: 1000
+H gamma: 1000
+H beta: 1000
+H alpha: 1500
+
+# Oxygen
+[OI] 6300: 800
+[OII]&[OII] 3726&3729: 800
+[OIII] 4363: 600
+[OIII] 4959: 1000
+[OIII] 5007: 1500
+[OIII]&HeI 5007&5015: 1500
+[OIII]&[OIII]&HeI 4959&5007&5015: 3000 
+
+# Nitrogen
+[NII] 5755: 800
+[NII]&H&[NII] 6548&alpha&6583: 2000
+
+# Sulphur
+[SII]&[SII] 6716&6731: 800
+[SIII] 6312: 800
+[SIII] 9069: 800
+[SIII] 9531: 800
+
+# Helium
+HeII 4686: 800
+
+# Argon
+[ArIII] 7136: 800
+[ArIV] 4711: 800
+[ArIV] 4740: 800
+[ArIV]&HeI 4711&4713: 800
+
+# Iron
+[FeIII] 4734: 800
+[FeIII] 4755: 800
+[FeIII] 4770: 800
+[FeIII] 4778: 800
