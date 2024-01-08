@@ -45,21 +45,9 @@ In the `run_line_fitting.py` file, please prepare the flux, error, and wavelengt
 # Prepare the flux, error, and wavelength arrays
 data_fits = current_direc + '/example_inputs/j1044+0353_addALL_icubes_wn.fits'
 err_fits = current_direc + '/example_inputs/j1044+0353_addALL_icubes_wn_err.fits'
-<<<<<<< HEAD
-spec = fits.open(data_fits)[0].data # flux array
-err = fits.open(err_fits)[0].data # error array
-wave = np.load(current_direc + '/example_inputs/wave_grid.npy') # wavelength array
-=======
 spec = fits.open(data_fits)[0].data
 err = fits.open(err_fits)[0].data   
 wave = np.load(current_direc + '/example_inputs/wave_grid.npy')
-
-# Redshift of the galaxy
-redshift = 0.01287
-
-# Whether the spectrum is in "vacuum" or "air" wavelength space
-vac_or_air = 'vac'
->>>>>>> e10e51f3482ae1cf81598cc7c29aa8265b5b55f3
 
 # run the fitting result for each selected line profile
 # redshift of the galaxy
