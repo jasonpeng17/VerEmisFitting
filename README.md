@@ -57,11 +57,15 @@ vac_or_air = 'air'
 # the order of fitting local continuum level
 fit_cont_order = 1
 # "line_selection_method = 'gui' or 'txt' defines how you want to select the lines for fitting, whether using a GUI or inputting a txt"
-input_example_txt = current_direc + '/input_txt/line_selection_example.txt' # text file for selecting intended lines for fitting
+line_select_method = 'txt'
+# text file for selecting intended lines for fitting
+input_example_txt = current_direc + '/input_txt/line_selection_example.txt' 
 # whether to interactively determine the fitting window, local continuum regions, and masking lines 
 fit_window_gui = True # if False, use the default values 
-region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_name = data_fits, line_select_method = 'gui', 
-                           input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui)
+# whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is False (i.e., pop up the window)
+params_windows_gui = True # if False, use the default parameter initial values and corresponding ranges for each iteration
+region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_name = data_fits, line_select_method = line_select_method, 
+                           input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, params_windows_gui = params_windows_gui)
 
 # "n_iteration = 1000" defines the number of iterations you want to run
 # "get_flux = True" defines if you want the return to be the flux dict (includes the flux of each line profile) or not; if False, then the return is the best-fitting parameters
@@ -94,7 +98,7 @@ Checking the line-fitting outputs:
 
 The `vac_wavelengths.txt` or `air_wavelengths.txt` file in the `doc` folder contain the lines available for fitting, as shown in the line-selection GUI. Users can modify these files by adding new lines or editing existing ones, following the provided format. For example, `[OIII] 4363: 4364.44` indicates that the line `[OIII] 4363` has a (vacuum) wavelength of `4364.44` Angstroms. It's recommended to categorize each line under the specific element section (e.g., `<Oxygen>` for `[OIII] 4363`), so that the added line appears under that element in the line-selection GUI. Comments can be included by starting a line with '#'.
 
-After adding a particular line to both wavelength files, users should also add this line to the `default_window_vspace.txt` file in the `doc` folder such that the pipeline can generate a default line-fitting window for this line. For example, `[OIII] 4363: 600` means the line `[OIII] 4363` has a half velocity width of the line-fitting window of 800 km/s (or equivalently, a total velocity width of 1600 km/s).
+After adding a particular line to both wavelength files, users should also add this line to the `default_window_vspace.txt` file in the `doc` folder such that the pipeline can generate a default line-fitting window for this line. For example, `[OIII] 4363: 600` means the line `[OIII] 4363` has a half velocity width of the line-fitting window of 800 km/s (or equivalently, a total velocity width of 1600 km/s). **The left and right local continuum regions are, by default, set to the first and last 10% of the wavelength range of the line-fitting window, respectively.**
 
 ## Recommended Fitting Procedures
 
@@ -106,7 +110,9 @@ After adding a particular line to both wavelength files, users should also add t
 
 3. **Review Saved Results**: Refer to the **Saved Results** section under **Running** to examine the fitting outcomes, including the PDF file in the `plots` folder and other relevant tables such as flux tables in the `flux_tables`, equivalent width tables in the `ew_tables`, and best-fitting parameter tables in the `parameter_tables`.
 
-4. **Refitting with Saved Settings**: For refitting the same selected lines, the saved `.cont` and `.lmsk` files will be loaded to recreate the previously chosen fitting window, local continuum regions, and masked regions.
+4. **Refitting with Saved Settings**: For refitting the same selected lines, the saved `.cont` and `.lmsk` files will be loaded to recreate the previously chosen fitting window, local continuum regions, and masked regions. Therefore, you can set `fit_window_gui = False` in the `line_fitting_exec` class. 
+
+5. **(Optional) Potential Application to IFU Data**: Importing the VerEmisFitting package for fitting spectra extracted from IFU data can be time-consuming and redundant, as it requires repeatedly clicking buttons in every pop-up GUI for each spectrum. Therefore, it is recommended to set `line_select_method = 'txt'`, `fit_window_gui = False`, and `params_window_gui = False`. The first two parameters are illustrated in the previous steps. The last parameter (`params_window_gui`) controls whether to interactively determine the initial values and ranges of parameters for each iteration. With this setup, no interactive GUI will pop up; thus, it is essential to ensure that the default configuration adequately fits your data.
 
 
 

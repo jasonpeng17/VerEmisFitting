@@ -1,6 +1,9 @@
 ### GUI for users to select fitting window, local continuum regions; and also mask lines
 
 import os
+import subprocess
+import requests
+import time
 from bokeh.plotting import show, output_file, save
 from bokeh.models import Span, BoxAnnotation
 from bokeh.client import pull_session
@@ -23,7 +26,32 @@ class FittingWindow:
         self.fits_name = fits_name # fits name 
         self.line_name = line_name # name of the selected line(s)
 
+    # @staticmethod
+    def ensure_bokeh_server(self):
+        # Check if Bokeh server is running
+        try:
+            response = requests.get("http://localhost:5006/")
+            if response.status_code == 200:
+                print("Bokeh server is already running.")
+                return True
+        except requests.ConnectionError:
+            print("Bokeh server is not running. Starting it now...")
+        
+        # Start Bokeh server in a subprocess
+        self.bokeh_process = subprocess.Popen(["bokeh", "serve"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Wait a bit for the server to start
+        time.sleep(1)
+        print("Bokeh server started.")
+
+    def stop_bokeh_server(self):
+        # stop/terminate the bokeh server
+        if hasattr(self, 'bokeh_process'):
+            self.bokeh_process.terminate()
+            self.bokeh_process = None
+
     def start_bokeh(self):
+        self.ensure_bokeh_server()
         # session = pull_session(session_id='fitting_window', url='http://localhost:5006')
         session = pull_session()
         # self.logger.info("Enabling BOKEH plots")
@@ -321,6 +349,8 @@ class FittingWindow:
                         print("\nline mask outside wl range: %s" % lmsk_str)
             # END: interactively mask lines
             self.save_lmsk_list(lmasks, lmhdr)
+        # Stop the server
+        self.stop_bokeh_server()
         return boundary, lmasks
 
 # TESTING:

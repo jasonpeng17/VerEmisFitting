@@ -32,7 +32,8 @@ from analysis_utils import *
 from IPython import embed
 
 class line_fitting_exec():
-    def __init__(self, redshift = None, vac_or_air = 'air', seed = 42, fits_name = None, line_select_method = 'gui', input_txt = None, fit_cont_order = 1, fit_window_gui = False):
+    def __init__(self, redshift = None, vac_or_air = 'air', seed = 42, fits_name = None, line_select_method = 'gui', input_txt = None, fit_cont_order = 1, fit_window_gui = False, 
+                 params_windows_gui = True):
         """
         Constructor for the line_fitting_exec class that initializes the following class variables:
         
@@ -44,8 +45,10 @@ class line_fitting_exec():
             The redshift of the galaxy.
         fit_cont_order : float
             The order of fitting local continuum level. Default is 1.
-        fit_cont_window : bool
+        fit_window_gui : bool
             Whether to interactively determine the fitting window, local continuum regions, and masking lines. Default is False.
+        params_windows_gui : bool
+            Whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is True (i.e., pop up the window).
         """
         self.c = const.c.to('km/s').value
         # save the seed value and apply to the line_fitting_model function such that it has the same randomness
@@ -57,6 +60,7 @@ class line_fitting_exec():
             self.redshift = redshift
         self.fit_cont_order = fit_cont_order
         self.fit_window_gui = fit_window_gui
+        self.params_windows_gui = params_windows_gui
         # Create a ttkbootstrap Style
         # self.style = ttk.Style(theme='cosmo')  # You can choose other themes as well
 
@@ -105,7 +109,7 @@ class line_fitting_exec():
             self.fit_func_choices = {line: "Lorentzian" for line in line_select_pars['lorentz_bw_lines']}
 
             # Call FitParamsWindow
-            fit_window = FitParamsWindow(self.selected_lines, self.broad_wings_lines, self.triple_gauss_lines, self.absorption_lines)
+            fit_window = FitParamsWindow(self.selected_lines, self.broad_wings_lines, self.triple_gauss_lines, self.absorption_lines, params_windows_gui = self.params_windows_gui)
             # get the initial guess, range size for each parameter, and also the fixed ratios for selected amplitude pairs
             self.initial_guess_dict, self.param_range_dict, self.amps_ratio_dict = fit_window.run()
 
@@ -251,6 +255,131 @@ class line_fitting_exec():
             result_fit = v_fit + flux_sc_v_fit + err_sc_v_fit + v_fit + flux_v_fit + err_v_fit
 
         return result_fit
+
+    def fitting_input_params(self, wave, spec, espec, n_iteration = 1000):
+        """
+        Construct the arrays for initial values and the parameter ranges for fitting multiple emission and/or absorption lines in a galaxy spectrum (in velocity space). 
+        This function is for fitting every line simultaneously.
+
+        Parameters
+        ----------
+        wave : array_like
+            Wavelength array.
+        spec : array_like
+            Flux array.
+        espec : array_like
+            Error array.
+        n_iteration : int, optional
+            Number of iterations for the MCMC algorithm. Default is 1000.
+        Returns
+        -------
+        best_model : ndarray
+            Best-fit model array for each line.
+        best_chi2 : float
+            Chi-square value of the best-fit model.
+        """
+        # step 1: obtain the velocity array, flux array (in velocity space), and error array (in velocity space)
+        # initialize the velocity, flux, and flux_err dictionaries
+        self.velocity_dict = dict()
+        self.flux_v_dict = dict()
+        self.err_v_dict = dict()
+        self.velocity_c_dict = dict() # unmasked version
+        self.flux_v_c_dict = dict() # unmasked version (no continuum subtracted)
+        self.err_v_c_dict = dict() # unmasked version (no continuum subtracted)
+
+        # Iterate through each selected line and return the corresponding extracted velocity, flux, and error arrays
+        for line in self.selected_lines:
+            if '&' in line:  # Special case for multilet
+                multilet_lines = split_multilet_line(line)
+                # doublet
+                if len(multilet_lines) == 2:
+                    v_arr, v_arr_2, flux_v_arr, err_v_arr, v_c_arr, v_c_arr_2, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line)
+                    self.velocity_dict[line] = np.array([v_arr, v_arr_2])
+                    self.velocity_c_dict[line] = np.array([v_c_arr, v_c_arr_2])
+                # triplet
+                if len(multilet_lines) == 3:
+                    v_arr, v_arr_2, v_arr_3, flux_v_arr, err_v_arr, v_c_arr, v_c_arr_2, v_c_arr_3, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line)
+                    self.velocity_dict[line] = np.array([v_arr, v_arr_2, v_arr_3])
+                    self.velocity_c_dict[line] = np.array([v_c_arr, v_c_arr_2, v_c_arr_3])
+            else:  # General case
+                v_arr, flux_v_arr, err_v_arr, v_c_arr, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line)
+                self.velocity_dict[line] = v_arr
+                self.velocity_c_dict[line] = v_c_arr
+            self.flux_v_dict[line] = flux_v_arr
+            self.err_v_dict[line] = err_v_arr
+            self.flux_v_c_dict[line] = flux_v_c_arr
+            self.err_v_c_dict[line] = err_v_c_arr
+                    
+        # Initialize the initial guess and the parameter range dictionaries
+        initial_guess_dict = dict()
+        param_range_dict = dict()
+
+        # append the initial guess and the param range for the velocity center and width
+        initial_guess_dict['v_e'] = np.array([self.initial_guess_dict['center_e'], self.initial_guess_dict['sigma_e']])
+        param_range_dict['v_e'] = np.array([self.param_range_dict['center_e'], self.param_range_dict['sigma_e']])
+        if len(self.absorption_lines) != 0:
+            initial_guess_dict['v_a'] = np.array([self.initial_guess_dict['center_a'], self.initial_guess_dict['sigma_a']])
+            param_range_dict['v_a'] = np.array([self.param_range_dict['center_a'], self.param_range_dict['sigma_a']])
+        if len(self.broad_wings_lines) != 0:
+            # two velocity emission components
+            initial_guess_dict['v_b'] = np.array([self.initial_guess_dict['center_b'], self.initial_guess_dict['sigma_b']])
+            param_range_dict['v_b'] = np.array([self.param_range_dict['center_b'], self.param_range_dict['sigma_b']])
+            # three velocity emission components
+            if len(self.triple_gauss_lines) != 0:
+                initial_guess_dict['v_b2'] = np.array([self.initial_guess_dict['center_b2'], self.initial_guess_dict['sigma_b2']])
+                param_range_dict['v_b2'] = np.array([self.param_range_dict['center_b2'], self.param_range_dict['sigma_b2']])
+
+        # Iterate through each selected line and its corresponding function to append the initial guess and param range for the line profile amplitude
+        for line in self.selected_lines:
+            flux_line_max = np.max(self.flux_v_dict[line]) # maximum of the line profile
+            # Handle multilet lines
+            if '&' in line:
+                multilet_lines = split_multilet_line(line)
+                for subline in multilet_lines:
+                    line_amp_base = f"amp_{subline.split(' ')[1]}" # base of the line amplitude name
+                    case_amp_keys = [line_amp_base]
+
+                    # Multi-emission component case
+                    if subline in self.broad_wings_lines:
+                        case_amp_keys.append(f"{line_amp_base}_b")
+                        # Three velocity emission components
+                        if subline in self.triple_gauss_lines:
+                            case_amp_keys.append(f"{line_amp_base}_b2")
+
+                    # Absorption case
+                    if subline in self.absorption_lines:
+                        case_amp_keys.append(f"{line_amp_base}_abs")
+
+                    # Populate dicts for current line
+                    initial_guess_dict[subline] = flux_line_max * np.array([self.initial_guess_dict[key] for key in case_amp_keys])
+                    param_range_dict[subline] = flux_line_max * np.array([self.param_range_dict[key] for key in case_amp_keys])
+                continue
+
+            # Single line case
+            line_amp_base = f"amp_{line.split(' ')[1]}" # base of the line amplitude name
+            case_amp_keys = [line_amp_base]
+
+            # Multi-emission component case
+            if line in self.broad_wings_lines:
+                case_amp_keys.append(f"{line_amp_base}_b")
+                # Three velocity emission components
+                if line in self.triple_gauss_lines:
+                    case_amp_keys.append(f"{line_amp_base}_b2")
+
+            # Absorption case
+            if line in self.absorption_lines:
+                case_amp_keys.append(f"{line_amp_base}_abs")
+
+            # Populate dicts for current line
+            initial_guess_dict[line] = flux_line_max * np.array([self.initial_guess_dict[key] for key in case_amp_keys])
+            param_range_dict[line] = flux_line_max * np.array([self.param_range_dict[key] for key in case_amp_keys])
+
+        input_arr = (self.velocity_dict, self.flux_v_dict, self.err_v_dict, initial_guess_dict, param_range_dict, self.amps_ratio_dict, self.absorption_lines, 
+                     self.broad_wings_lines, self.double_gauss_lines, self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, self.fitting_method, self.fit_func_choices)
+        self.galaxy4 = line_fitting_model(seed = self.seed)
+        best_model, best_chi2 = self.galaxy4.fitting_all_lines(input_arr, n_iteration = n_iteration)
+        return best_model, best_chi2
+
 
     def all_lines_result(self, wave, spec, espec, n_iteration = 1000, get_flux = False, save_flux_table = False,
                          get_ew = True, save_ew_table = False, get_error = False, save_par_table = False):
@@ -732,130 +861,6 @@ class line_fitting_exec():
 
         return self.galaxy4.best_params
 
-
-    def fitting_input_params(self, wave, spec, espec, n_iteration = 1000):
-        """
-        Construct the arrays for initial values and the parameter ranges for fitting multiple emission and/or absorption lines in a galaxy spectrum (in velocity space). 
-        This function is for fitting every line simultaneously.
-
-        Parameters
-        ----------
-        wave : array_like
-            Wavelength array.
-        spec : array_like
-            Flux array.
-        espec : array_like
-            Error array.
-        n_iteration : int, optional
-            Number of iterations for the MCMC algorithm. Default is 1000.
-        Returns
-        -------
-        best_model : ndarray
-            Best-fit model array for each line.
-        best_chi2 : float
-            Chi-square value of the best-fit model.
-        """
-        # step 1: obtain the velocity array, flux array (in velocity space), and error array (in velocity space)
-        # initialize the velocity, flux, and flux_err dictionaries
-        self.velocity_dict = dict()
-        self.flux_v_dict = dict()
-        self.err_v_dict = dict()
-        self.velocity_c_dict = dict() # unmasked version
-        self.flux_v_c_dict = dict() # unmasked version (no continuum subtracted)
-        self.err_v_c_dict = dict() # unmasked version (no continuum subtracted)
-
-        # Iterate through each selected line and return the corresponding extracted velocity, flux, and error arrays
-        for line in self.selected_lines:
-            if '&' in line:  # Special case for multilet
-                multilet_lines = split_multilet_line(line)
-                # doublet
-                if len(multilet_lines) == 2:
-                    v_arr, v_arr_2, flux_v_arr, err_v_arr, v_c_arr, v_c_arr_2, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line)
-                    self.velocity_dict[line] = np.array([v_arr, v_arr_2])
-                    self.velocity_c_dict[line] = np.array([v_c_arr, v_c_arr_2])
-                # triplet
-                if len(multilet_lines) == 3:
-                    v_arr, v_arr_2, v_arr_3, flux_v_arr, err_v_arr, v_c_arr, v_c_arr_2, v_c_arr_3, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line)
-                    self.velocity_dict[line] = np.array([v_arr, v_arr_2, v_arr_3])
-                    self.velocity_c_dict[line] = np.array([v_c_arr, v_c_arr_2, v_c_arr_3])
-            else:  # General case
-                v_arr, flux_v_arr, err_v_arr, v_c_arr, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line)
-                self.velocity_dict[line] = v_arr
-                self.velocity_c_dict[line] = v_c_arr
-            self.flux_v_dict[line] = flux_v_arr
-            self.err_v_dict[line] = err_v_arr
-            self.flux_v_c_dict[line] = flux_v_c_arr
-            self.err_v_c_dict[line] = err_v_c_arr
-                    
-        # Initialize the initial guess and the parameter range dictionaries
-        initial_guess_dict = dict()
-        param_range_dict = dict()
-
-        # append the initial guess and the param range for the velocity center and width
-        initial_guess_dict['v_e'] = np.array([self.initial_guess_dict['center_e'], self.initial_guess_dict['sigma_e']])
-        param_range_dict['v_e'] = np.array([self.param_range_dict['center_e'], self.param_range_dict['sigma_e']])
-        if len(self.absorption_lines) != 0:
-            initial_guess_dict['v_a'] = np.array([self.initial_guess_dict['center_a'], self.initial_guess_dict['sigma_a']])
-            param_range_dict['v_a'] = np.array([self.param_range_dict['center_a'], self.param_range_dict['sigma_a']])
-        if len(self.broad_wings_lines) != 0:
-            # two velocity emission components
-            initial_guess_dict['v_b'] = np.array([self.initial_guess_dict['center_b'], self.initial_guess_dict['sigma_b']])
-            param_range_dict['v_b'] = np.array([self.param_range_dict['center_b'], self.param_range_dict['sigma_b']])
-            # three velocity emission components
-            if len(self.triple_gauss_lines) != 0:
-                initial_guess_dict['v_b2'] = np.array([self.initial_guess_dict['center_b2'], self.initial_guess_dict['sigma_b2']])
-                param_range_dict['v_b2'] = np.array([self.param_range_dict['center_b2'], self.param_range_dict['sigma_b2']])
-
-        # Iterate through each selected line and its corresponding function to append the initial guess and param range for the line profile amplitude
-        for line in self.selected_lines:
-            flux_line_max = np.max(self.flux_v_dict[line]) # maximum of the line profile
-            # Handle multilet lines
-            if '&' in line:
-                multilet_lines = split_multilet_line(line)
-                for subline in multilet_lines:
-                    line_amp_base = f"amp_{subline.split(' ')[1]}" # base of the line amplitude name
-                    case_amp_keys = [line_amp_base]
-
-                    # Multi-emission component case
-                    if subline in self.broad_wings_lines:
-                        case_amp_keys.append(f"{line_amp_base}_b")
-                        # Three velocity emission components
-                        if subline in self.triple_gauss_lines:
-                            case_amp_keys.append(f"{line_amp_base}_b2")
-
-                    # Absorption case
-                    if subline in self.absorption_lines:
-                        case_amp_keys.append(f"{line_amp_base}_abs")
-
-                    # Populate dicts for current line
-                    initial_guess_dict[subline] = flux_line_max * np.array([self.initial_guess_dict[key] for key in case_amp_keys])
-                    param_range_dict[subline] = flux_line_max * np.array([self.param_range_dict[key] for key in case_amp_keys])
-                continue
-
-            # Single line case
-            line_amp_base = f"amp_{line.split(' ')[1]}" # base of the line amplitude name
-            case_amp_keys = [line_amp_base]
-
-            # Multi-emission component case
-            if line in self.broad_wings_lines:
-                case_amp_keys.append(f"{line_amp_base}_b")
-                # Three velocity emission components
-                if line in self.triple_gauss_lines:
-                    case_amp_keys.append(f"{line_amp_base}_b2")
-
-            # Absorption case
-            if line in self.absorption_lines:
-                case_amp_keys.append(f"{line_amp_base}_abs")
-
-            # Populate dicts for current line
-            initial_guess_dict[line] = flux_line_max * np.array([self.initial_guess_dict[key] for key in case_amp_keys])
-            param_range_dict[line] = flux_line_max * np.array([self.param_range_dict[key] for key in case_amp_keys])
-
-        input_arr = (self.velocity_dict, self.flux_v_dict, self.err_v_dict, initial_guess_dict, param_range_dict, self.amps_ratio_dict, self.absorption_lines, 
-                     self.broad_wings_lines, self.double_gauss_lines, self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, self.fitting_method, self.fit_func_choices)
-        self.galaxy4 = line_fitting_model(seed = self.seed)
-        best_model, best_chi2 = self.galaxy4.fitting_all_lines(input_arr, n_iteration = n_iteration)
-        return best_model, best_chi2
 
     def save_par_pd_table(self):
         # Define col names

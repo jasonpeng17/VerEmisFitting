@@ -75,13 +75,12 @@ class FitParamsWindow(tk.Tk):
         window = FitParamsWindow(selected_lines_list, broad_wings_list, triple_gauss_list, absorption_list)
         guess_params, range_params = window.run()
     """
-    def __init__(self, selected_lines, broad_wings_lines, triple_gauss_lines, absorption_lines):
+    def __init__(self, selected_lines, broad_wings_lines, triple_gauss_lines, absorption_lines, params_windows_gui=True):
         super().__init__()
 
         self.withdraw() #delete the tk.Tk blank window
 
-        self.font_tuple = ("Helvetica", 14, "bold")
-        self.font_txt_tuple = ("Helvetica", 16, "italic")
+        self.params_windows_gui = params_windows_gui # pop up the params window or not; default is True
 
         self.selected_lines = selected_lines
         self.broad_wings_lines = broad_wings_lines
@@ -91,75 +90,150 @@ class FitParamsWindow(tk.Tk):
         self.params_dict = {}
         self.params_range_dict = {}
 
-        self.guess_window = ttk.Toplevel(self)
-        self.guess_window.title("Input Initial Guess for each Parameter")
+        if self.params_windows_gui:
+            # font style
+            self.font_tuple = ("Helvetica", 14, "bold")
+            self.font_txt_tuple = ("Helvetica", 16, "italic")
 
-        # Create a Label widget for the message
-        self.guess_message = ttk.Label(self.guess_window, text="Notice: the units for the inputs of 'center_{}' and 'sigma_{}' are in km/s. \
-                                                               The inputs for all amplitudes, 'amp_{}' are in units of the maximum of the line flux array, max(flux_v_arr), e.g., 0.5 means 0.5 * max(flux_v_arr).",
-                                      font=self.font_txt_tuple, wraplength=500, justify=tk.LEFT)
-        self.guess_message.grid(row=0, column=0, sticky='w')
+            self.guess_window = ttk.Toplevel(self)
+            self.guess_window.title("Input Initial Guess for each Parameter")
 
-        self.guess_column = 0
-        self.guess_row = 0
+            # Create a Label widget for the message
+            self.guess_message = ttk.Label(self.guess_window, text="Notice: the units for the inputs of 'center_{}' and 'sigma_{}' are in km/s. \
+                                                                   The inputs for all amplitudes, 'amp_{}' are in units of the maximum of the line flux array, max(flux_v_arr), e.g., 0.5 means 0.5 * max(flux_v_arr).",
+                                          font=self.font_txt_tuple, wraplength=500, justify=tk.LEFT)
+            self.guess_message.grid(row=0, column=0, sticky='w')
 
-        self.range_window = None
+            self.guess_column = 0
+            self.guess_row = 0
 
-        # Create a new frame to contain all the widgets that were directly in guess_window
-        content_frame = ttk.Frame(self.guess_window)
-        content_frame.grid(row=1, column=0, sticky='nsew')
+            self.range_window = None
+
+            # Create a new frame to contain all the widgets that were directly in guess_window
+            content_frame = ttk.Frame(self.guess_window)
+            content_frame.grid(row=1, column=0, sticky='nsew')
+
+            # Emission component
+            if self.selected_lines:
+                self.create_section_label('First Emission Component', content_frame)
+                self.create_entry('center_e', 0, content_frame)
+                self.create_entry('sigma_e', 50, content_frame)
+                for line in self.selected_lines:
+                    self.create_amp_entry(line, '', 'e', content_frame)
+                self.guess_column += 1
+                self.guess_row = 1
+
+            # Broad wings emission component
+            if self.broad_wings_lines:
+                self.create_section_label('Second Emission Component', content_frame)
+                self.create_entry('center_b', 0, content_frame)
+                self.create_entry('sigma_b', 150, content_frame)
+                for line in self.broad_wings_lines:
+                    self.create_amp_entry(line, '_b', 'b', content_frame)
+                self.guess_column += 1
+                self.guess_row = 1
+
+            # Triple Gaussian fitting
+            if self.triple_gauss_lines:
+                self.create_section_label('Third Emission Component', content_frame)
+                self.create_entry('center_b2', 0, content_frame)
+                self.create_entry('sigma_b2', 300, content_frame)
+                for line in self.triple_gauss_lines:
+                    self.create_amp_entry(line, '_b2', 'b2', content_frame)
+                self.guess_column += 1
+                self.guess_row = 1
+
+            # Absorption component
+            if self.absorption_lines:
+                self.create_section_label('Absorption Component', content_frame)
+                self.create_entry('center_a', 0, content_frame)
+                self.create_entry('sigma_a', 900, content_frame)
+                for line in self.absorption_lines:
+                    self.create_amp_entry(line, '_abs', 'abs', content_frame)
+                self.guess_column += 1
+                self.guess_row = 1
+
+            # button for fixing the ratio between two amplitudes
+            ratio_button_frame = ttk.Frame(self.guess_window)
+            ratio_button_frame.grid(row=2, column=0, sticky='ew')
+            ttk.Button(ratio_button_frame, text="Set Amplitude Ratio", command=self.create_ratio_window, bootstyle= 'default').pack(side='bottom')
+
+            # button for saving the enter input        
+            button_frame = ttk.Frame(self.guess_window)
+            button_frame.grid(row=3, column=0, sticky='ew')
+            ttk.Button(button_frame, text="Save", command=self.save_params, bootstyle= 'success').pack()
+
+            self.guess_window.protocol("WM_DELETE_WINDOW", self.stop_mainloop)
+        else:
+            self.set_default_values()
+
+    def set_default_values(self):
+        # initialize params' values and ranges
+        self.params_values = {}
+        self.params_range_values = {}
 
         # Emission component
         if self.selected_lines:
-            self.create_section_label('First Emission Component', content_frame)
-            self.create_entry('center_e', 0, content_frame)
-            self.create_entry('sigma_e', 50, content_frame)
-            for line in self.selected_lines:
-                self.create_amp_entry(line, '', 'e', content_frame)
-            self.guess_column += 1
-            self.guess_row = 1
+            # first emission component's center and sigma values and ranges
+            self.params_values['center_e'] = 0
+            self.params_values['sigma_e'] = 50
+            self.params_range_values['center_e'] = 10
+            self.params_range_values['sigma_e'] = 50
 
         # Broad wings emission component
         if self.broad_wings_lines:
-            self.create_section_label('Second Emission Component', content_frame)
-            self.create_entry('center_b', 0, content_frame)
-            self.create_entry('sigma_b', 150, content_frame)
-            for line in self.broad_wings_lines:
-                self.create_amp_entry(line, '_b', 'b', content_frame)
-            self.guess_column += 1
-            self.guess_row = 1
+            # second emission component's center and sigma values and ranges
+            self.params_values['center_b'] = 0
+            self.params_values['sigma_b'] = 150
+            self.params_range_values['center_b'] = 10
+            self.params_range_values['sigma_b'] = 100
 
         # Triple Gaussian fitting
         if self.triple_gauss_lines:
-            self.create_section_label('Third Emission Component', content_frame)
-            self.create_entry('center_b2', 0, content_frame)
-            self.create_entry('sigma_b2', 300, content_frame)
-            for line in self.triple_gauss_lines:
-                self.create_amp_entry(line, '_b2', 'b2', content_frame)
-            self.guess_column += 1
-            self.guess_row = 1
+            # third emission component's center and sigma values and ranges
+            self.params_values['center_b2'] = 0
+            self.params_values['sigma_b2'] = 300
+            self.params_range_values['center_b2'] = 10
+            self.params_range_values['sigma_b2'] = 200
 
         # Absorption component
         if self.absorption_lines:
-            self.create_section_label('Absorption Component', content_frame)
-            self.create_entry('center_a', 0, content_frame)
-            self.create_entry('sigma_a', 300, content_frame)
-            for line in self.absorption_lines:
-                self.create_amp_entry(line, '_abs', 'abs', content_frame)
-            self.guess_column += 1
-            self.guess_row = 1
+            # absorption component's center and sigma values and ranges
+            self.params_values['center_a'] = 0
+            self.params_values['sigma_a'] = 900
+            self.params_range_values['center_a'] = 10
+            self.params_range_values['sigma_a'] = 400
 
-        # button for fixing the ratio between two amplitudes
-        ratio_button_frame = ttk.Frame(self.guess_window)
-        ratio_button_frame.grid(row=2, column=0, sticky='ew')
-        ttk.Button(ratio_button_frame, text="Set Amplitude Ratio", command=self.create_ratio_window, bootstyle= 'default').pack(side='bottom')
+        # for each selected line
+        for line in self.selected_lines:
+            if '&' not in line:
+                amp = 'amp_{}'.format(line.split(' ')[1])
+                self.params_values[amp] = 1.
+                self.params_range_values[amp] = 1.
+            else:
+                for amp in line.split(' ')[1].split('&'):
+                    amp_label = 'amp_{}'.format(amp) 
+                    self.params_values[amp_label] = 1.
+                    self.params_range_values[amp_label] = 1.
+        # for each broad_wing line
+        for broad_line in self.broad_wings_lines:
+            amp_broad = 'amp_{}'.format(broad_line.split(' ')[1]) + '_b'
+            self.params_values[amp_broad] = 0.05
+            self.params_range_values[amp_broad] = 0.05
+        # for each triple_gauss line
+        for triple_line in self.triple_gauss_lines:
+            amp_triple = 'amp_{}'.format(triple_line.split(' ')[1]) + '_b2'
+            self.params_values[amp_triple] = 0.01
+            self.params_range_values[amp_triple] = 0.01
+        # for each abs_gauss line
+        for abs_line in self.absorption_lines:
+            amp_abs = 'amp_{}'.format(abs_line.split(' ')[1]) + '_abs'
+            self.params_values[amp_abs] = 0.01
+            self.params_range_values[amp_abs] = 0.01
 
-        # button for saving the enter input        
-        button_frame = ttk.Frame(self.guess_window)
-        button_frame.grid(row=3, column=0, sticky='ew')
-        ttk.Button(button_frame, text="Save", command=self.save_params, bootstyle= 'success').pack()
-
-        self.guess_window.protocol("WM_DELETE_WINDOW", self.stop_mainloop)
+        # Set default amplitude ratios if needed
+        self.amplitude_ratios = {}
+        # Example: self.amplitude_ratios['ratio_amp1_over_amp2'] = 1.0
 
     def create_entry(self, param_name, init_value, master, window='guess'):
         if window == 'guess':
@@ -262,7 +336,7 @@ class FitParamsWindow(tk.Tk):
         if self.absorption_lines:
             self.create_section_label('Absorption Component', content_frame, window='range')
             self.create_entry('center_a', 10, content_frame, window='range')
-            self.create_entry('sigma_a', 200, content_frame, window='range')
+            self.create_entry('sigma_a', 400, content_frame, window='range')
             for line in self.absorption_lines:
                 self.create_amp_entry(line, '_abs', 'abs', content_frame, window='range')
             self.range_column += 1
@@ -393,10 +467,11 @@ class FitParamsWindow(tk.Tk):
         self.quit()
 
     def run(self):
-        self.mainloop()
-        # Here we return the new dictionaries
-        return self.params_values, self.params_range_values, getattr(self, 'amplitude_ratios', {})
-        # return self.params_values, self.params_range_values  
-
+        if self.params_windows_gui:
+            self.mainloop()
+            return self.params_values, self.params_range_values, getattr(self, 'amplitude_ratios', {})
+        else:
+            return self.params_values, self.params_range_values, self.amplitude_ratios
+            
 
 

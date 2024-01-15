@@ -23,11 +23,15 @@ vac_or_air = 'air'
 # the order of fitting local continuum level
 fit_cont_order = 1
 # "line_selection_method = 'gui' or 'txt' defines how you want to select the lines for fitting, whether using a GUI or inputting a txt"
-input_example_txt = current_direc + '/input_txt/line_selection_example.txt' # text file for selecting intended lines for fitting
+line_select_method = 'txt'
+# text file for selecting intended lines for fitting
+input_example_txt = current_direc + '/input_txt/line_selection_example.txt' 
 # whether to interactively determine the fitting window, local continuum regions, and masking lines 
 fit_window_gui = True # if False, use the default values 
-region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_name = data_fits, line_select_method = 'gui', 
-                           input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui)
+# whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is False (i.e., pop up the window)
+params_windows_gui = True # if False, use the default parameter initial values and corresponding ranges for each iteration
+region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_name = data_fits, line_select_method = line_select_method, 
+                           input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, params_windows_gui = params_windows_gui)
 
 # "n_iteration = 1000" defines the number of iterations you want to run
 # "get_flux = True" defines if you want the return to be the flux dict (includes the flux of each line profile) or not; if False, then the return is the best-fitting parameters
