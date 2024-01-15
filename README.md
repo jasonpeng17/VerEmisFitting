@@ -13,7 +13,7 @@ conda env create -f environment.yml
 
 2. Activating an environment: 
 ```
-conda activate astroconda-lmfit
+conda activate ver_emis_fitting
 ```
 
 3. To deactivate an environment:
@@ -25,12 +25,12 @@ conda deactivate
 
 - To delete an environment with all of its packages:
 ```
-conda env remove -n astroconda-lmfit
+conda env remove -n ver_emis_fitting
 ```
 
 - To rename a conda environment:
 ```
-conda create --name astroconda-lmfit --clone astroconda2
+conda create --name <new environment name> --clone ver_emis_fitting
 ```
 
 ## Running
