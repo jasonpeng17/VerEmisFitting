@@ -169,7 +169,7 @@ class line_fitting_exec():
         f[:] = flux[indrange]/np.polyval(linecoeff, w[indrange])
         return w[indrange], f, flux_cont, flux_cont_err, linecoeff
 
-    def extract_fit_window(self, wave, spec, espec, selected_line):
+    def extract_fit_window(self, wave, spec, espec, selected_line, indx):
         '''
         Extract and return velocity array, flux array (in velocity space), and error array (in velocity space)
         for the given selected line or multiplet.
@@ -194,35 +194,51 @@ class line_fitting_exec():
         err_fit = np.float64(espec_c[indx_lolim:indx_uplim+1])
 
         # determine the local continuum and subtract it from the flux array
-        cont_fit = local_cont_reg(wave_c, indx_lolim, indx_uplim, fraction = 0.1)
+        cont_fit = local_cont_reg(wave_c, indx_lolim, indx_uplim, fraction = 0.2)
         
         # interactively determine the fitting window, local continuum regions, and masking lines
         if self.fit_window_gui:
             # initialize a gui for determining fitting window 
-            Fitting_Window = FittingWindow(wave_c, spec_c, fits_name = self.fits_name, line_name = selected_line)
+            if indx == 0:
+                Fitting_Window = FittingWindow(wave_c, spec_c, fits_name = self.fits_name, line_name = selected_line, indx = indx)
+                self.bokeh_session = Fitting_Window.session 
+            else:
+                Fitting_Window = FittingWindow(wave_c, spec_c, fits_name = self.fits_name, line_name = selected_line, indx = indx, bokeh_session = self.bokeh_session)
             # new boundary and line mask lists
             boundary, lmasks = Fitting_Window.run_process(central_wave, wave_c[indx_lolim], wave_c[indx_uplim], cont_fit[0][1], cont_fit[1][0], mask_lines = True)
             # extract new fit window
             new_fit_window_indx = np.where((wave_c >= boundary[0]) & (wave_c <= boundary[1]))
-            wave_fit = np.float64(wave_c[new_fit_window_indx])
-            flux_fit = np.float64(spec_c[new_fit_window_indx])
-            err_fit = np.float64(espec_c[new_fit_window_indx])
             cont_fit = [[boundary[0], boundary[2]],[boundary[3], boundary[1]]]
-            # mask selected lines
-            if len(lmasks) >= 1:
-                self.lmsks_dict[selected_line] = lmasks # save for later plotting (show the masked regions)
-                # save the unmasked raw data for later plotting 
-                wave_fit_c = np.copy(wave_fit)
-                flux_fit_c = np.copy(flux_fit)
-                err_fit_c = np.copy(err_fit)
-                # masked the raw data for LMFIT fitting
-                for ml in lmasks:
-                    wave_fit[np.where((wave_fit >= ml['w0'])&(wave_fit <= ml['w1']))] = 0
-                    wave_fit = np.ma.masked_values(wave_fit, 0)
-                    mask = wave_fit.mask
-                    flux_fit = np.ma.masked_array(flux_fit, mask=mask).compressed()
-                    err_fit = np.ma.masked_array(err_fit, mask=mask).compressed()
-                    wave_fit = wave_fit.compressed()
+        else: # find if there are any local lmask file
+            Fitting_Window = FittingWindow(wave_c, spec_c, fits_name = self.fits_name, line_name = selected_line, indx = 1) # a random indx number (!= 0) to not start bokeh server
+            lmasks, _ = Fitting_Window.find_local_lmsk_file(selected_line)
+            cont_dict, _ = Fitting_Window.find_local_cont_file(selected_line)
+            if len(cont_dict) == 1:
+                for ct in cont_dict:
+                    x1, x2, x3, x4 = ct['x1'], ct['x2'], ct['x3'], ct['x4']
+            cont_fit = [[x1, x3],[x4, x2]]
+            # extract new fit window
+            new_fit_window_indx = np.where((wave_c >= x1) & (wave_c <= x2))
+        # new wave, flux, and err arrays
+        wave_fit = np.float64(wave_c[new_fit_window_indx])
+        flux_fit = np.float64(spec_c[new_fit_window_indx])
+        err_fit = np.float64(espec_c[new_fit_window_indx])
+
+        # mask selected lines
+        if len(lmasks) >= 1:
+            self.lmsks_dict[selected_line] = lmasks # save for later plotting (show the masked regions)
+            # save the unmasked raw data for later plotting 
+            wave_fit_c = np.copy(wave_fit)
+            flux_fit_c = np.copy(flux_fit)
+            err_fit_c = np.copy(err_fit)
+            # masked the raw data for LMFIT fitting
+            for ml in lmasks:
+                wave_fit[np.where((wave_fit >= ml['w0'])&(wave_fit <= ml['w1']))] = 0
+                wave_fit = np.ma.masked_values(wave_fit, 0)
+                mask = wave_fit.mask
+                flux_fit = np.ma.masked_array(flux_fit, mask=mask).compressed()
+                err_fit = np.ma.masked_array(err_fit, mask=mask).compressed()
+                wave_fit = wave_fit.compressed()
         
         # fit the local continuum level and extract it from the flux array
         cont_f_fit, cont_f_fit_err = self.region_around_line(wave_fit, flux_fit, cont_fit, order = self.fit_cont_order)[-3:-1]
@@ -249,7 +265,8 @@ class line_fitting_exec():
             flux_v_fit_c = [flux_fit_c * chosen_line_wave / self.c]
             err_v_fit_c = [err_fit_c * chosen_line_wave / self.c]
             result_fit = v_fit + flux_sc_v_fit + err_sc_v_fit + v_fit_c + flux_v_fit_c + err_v_fit_c
-        else: # if no, then append the masked velocity and flux (no continuum subtracted) arrays again
+        else:
+            # if no, then append the masked velocity and flux (no continuum subtracted) arrays again
             flux_v_fit = [flux_fit * chosen_line_wave / self.c]
             err_v_fit = [err_fit * chosen_line_wave / self.c]
             result_fit = v_fit + flux_sc_v_fit + err_sc_v_fit + v_fit + flux_v_fit + err_v_fit
@@ -288,21 +305,21 @@ class line_fitting_exec():
         self.err_v_c_dict = dict() # unmasked version (no continuum subtracted)
 
         # Iterate through each selected line and return the corresponding extracted velocity, flux, and error arrays
-        for line in self.selected_lines:
+        for indx, line in enumerate(self.selected_lines):
             if '&' in line:  # Special case for multilet
                 multilet_lines = split_multilet_line(line)
                 # doublet
                 if len(multilet_lines) == 2:
-                    v_arr, v_arr_2, flux_v_arr, err_v_arr, v_c_arr, v_c_arr_2, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line)
+                    v_arr, v_arr_2, flux_v_arr, err_v_arr, v_c_arr, v_c_arr_2, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line, indx)
                     self.velocity_dict[line] = np.array([v_arr, v_arr_2])
                     self.velocity_c_dict[line] = np.array([v_c_arr, v_c_arr_2])
                 # triplet
                 if len(multilet_lines) == 3:
-                    v_arr, v_arr_2, v_arr_3, flux_v_arr, err_v_arr, v_c_arr, v_c_arr_2, v_c_arr_3, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line)
+                    v_arr, v_arr_2, v_arr_3, flux_v_arr, err_v_arr, v_c_arr, v_c_arr_2, v_c_arr_3, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line, indx)
                     self.velocity_dict[line] = np.array([v_arr, v_arr_2, v_arr_3])
                     self.velocity_c_dict[line] = np.array([v_c_arr, v_c_arr_2, v_c_arr_3])
             else:  # General case
-                v_arr, flux_v_arr, err_v_arr, v_c_arr, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line)
+                v_arr, flux_v_arr, err_v_arr, v_c_arr, flux_v_c_arr, err_v_c_arr = self.extract_fit_window(wave, spec, espec, line, indx)
                 self.velocity_dict[line] = v_arr
                 self.velocity_c_dict[line] = v_c_arr
             self.flux_v_dict[line] = flux_v_arr
@@ -433,6 +450,8 @@ class line_fitting_exec():
 
         # initialize the dicts for residuals, chi-square, and best-fitting models
         self.residual_dict = dict()
+        # if len(self.lmsks_dict) > 0: # construct another residual_dict for plotting
+        #     self.residual_c_dict = dict()
         self.redchi2_dict = dict()
         # model for narrow and broad emission components
         if self.broad_wings_lines:
@@ -455,6 +474,9 @@ class line_fitting_exec():
                     params_line = [self.x0_e, self.sigma_e] + amps
                     self.residual_dict[line] = residual_2p_v_c_doublet(params_line, self.velocity_dict[line][0], self.velocity_dict[line][1], 
                                                                        self.flux_v_dict[line], self.err_v_dict[line])
+                    # if line in self.lmsks_dict.keys():
+                    #     self.residual_c_dict[line] = residual_2p_v_c_doublet(params_line, self.velocity_c_dict[line][0], self.velocity_c_dict[line][1], 
+                    #                                                          self.flux_v_c_dict[line], self.err_v_c_dict[line])
                 # multi emission component
                 else:
                     for num_ii, l in enumerate(multilet_lines):
@@ -521,10 +543,18 @@ class line_fitting_exec():
                             self.residual_dict[line] = residual_2p_gl_v_c_doublet(params_line, self.velocity_dict[line][0], self.velocity_dict[line][1], 
                                                                                   self.flux_v_dict[line], self.err_v_dict[line], 
                                                                                   num_comp_first=num_comp_first, num_comp_second=num_comp_second)
+                            # if line in self.lmsks_dict.keys():
+                            #     self.residual_c_dict[line] = residual_2p_gl_v_c_doublet(params_line, self.velocity_c_dict[line][0], self.velocity_c_dict[line][1], 
+                            #                                                             self.flux_v_c_dict[line], self.err_v_c_dict[line], 
+                            #                                                             num_comp_first=num_comp_first, num_comp_second=num_comp_second)
                         else:
                             self.residual_dict[line] = residual_2p_v_c_doublet(params_line, self.velocity_dict[line][0], self.velocity_dict[line][1], 
                                                                                self.flux_v_dict[line], self.err_v_dict[line], 
                                                                                num_comp_first=num_comp_first, num_comp_second=num_comp_second)
+                            # if line in self.lmsks_dict.keys():
+                            #     self.residual_c_dict[line] = residual_2p_v_c_doublet(params_line, self.velocity_c_dict[line][0], self.velocity_c_dict[line][1], 
+                            #                                                          self.flux_v_c_dict[line], self.err_v_c_dict[line], 
+                            #                                                          num_comp_first=num_comp_first, num_comp_second=num_comp_second)
 
                     # Triple line profiles
                     if len(multilet_lines) == 3:
@@ -591,16 +621,26 @@ class line_fitting_exec():
                             self.residual_dict[line] = residual_3p_gl_v_c_triplet(params_line, self.velocity_dict[line][0], self.velocity_dict[line][1], 
                                                                                   self.velocity_dict[line][2], self.flux_v_dict[line], self.err_v_dict[line], 
                                                                                   num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third)
+                            # if line in self.lmsks_dict.keys():
+                            #     self.residual_c_dict[line] = residual_3p_gl_v_c_triplet(params_line, self.velocity_c_dict[line][0], self.velocity_c_dict[line][1], 
+                            #                                                             self.velocity_c_dict[line][2], self.flux_v_c_dict[line], self.err_v_c_dict[line], 
+                            #                                                             num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third)
                         else:
                             self.residual_dict[line] = residual_3p_v_c_triplet(params_line, self.velocity_dict[line][0], self.velocity_dict[line][1], 
                                                                                self.velocity_dict[line][2], self.flux_v_dict[line], self.err_v_dict[line], 
                                                                                num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third)
+                            # if line in self.lmsks_dict.keys():
+                            #     self.residual_c_dict[line] = residual_3p_v_c_triplet(params_line, self.velocity_c_dict[line][0], self.velocity_c_dict[line][1], 
+                            #                                                          self.velocity_c_dict[line][2], self.flux_v_c_dict[line], self.err_v_c_dict[line], 
+                            #                                                          num_comp_first=num_comp_first, num_comp_second=num_comp_second, num_comp_third=num_comp_third)
             else:  # General case
                 amp = [self.amps_dict[line.split(' ')[1]]]
                 # single line profile with single emission component
                 if (line not in self.absorption_lines) and (line not in self.broad_wings_lines):
                     params_line = [self.x0_e, self.sigma_e] + amp
                     self.residual_dict[line] = residual_1p_v_c(params_line, self.velocity_dict[line], self.flux_v_dict[line], self.err_v_dict[line])
+                    # if line in self.lmsks_dict.keys():
+                    #     self.residual_c_dict[line] = residual_1p_v_c(params_line, self.velocity_c_dict[line], self.flux_v_c_dict[line], self.err_v_c_dict[line])
                 # single line profile with multi emission components
                 if (line not in self.absorption_lines) and (line in self.broad_wings_lines):
                     # double emission components
@@ -611,10 +651,14 @@ class line_fitting_exec():
                             self.residual_dict[line] = residual_2p_gl_v_c(params_line, self.velocity_dict[line], self.flux_v_dict[line], self.err_v_dict[line])
                             self.best_model_n_dict[line] = gaussian_1p_v(self.velocity_dict[line], self.x0_e, self.sigma_e, amp[0])
                             self.best_model_b_dict[line] = lorentzian_1p_v(self.velocity_dict[line], self.x0_b, self.sigma_b, broad_amp[0])
+                            # if line in self.lmsks_dict.keys():
+                            #     self.residual_c_dict[line] = residual_2p_gl_v_c(params_line, self.velocity_c_dict[line], self.flux_v_c_dict[line], self.err_v_c_dict[line])
                         else:
                             self.residual_dict[line] = residual_2p_v_c(params_line, self.velocity_dict[line], self.flux_v_dict[line], self.err_v_dict[line])
                             self.best_model_n_dict[line] = gaussian_1p_v(self.velocity_dict[line], self.x0_e, self.sigma_e, amp[0])
                             self.best_model_b_dict[line] = gaussian_1p_v(self.velocity_dict[line], self.x0_b, self.sigma_b, broad_amp[0])
+                            # if line in self.lmsks_dict.keys():
+                            #     self.residual_c_dict[line] = residual_2p_v_c(params_line, self.velocity_c_dict[line], self.flux_v_c_dict[line], self.err_v_c_dict[line])
                     # triple emission components
                     if line in self.triple_gauss_lines:
                         broad_amp = [self.amps_dict[f"{line.split(' ')[1]}_b"], self.amps_dict[f"{line.split(' ')[1]}_b2"]]
@@ -624,11 +668,15 @@ class line_fitting_exec():
                             self.best_model_n_dict[line] = gaussian_1p_v(self.velocity_dict[line], self.x0_e, self.sigma_e, amp[0])
                             self.best_model_b_dict[line] = gaussian_1p_v(self.velocity_dict[line], self.x0_b, self.sigma_b, broad_amp[0])
                             self.best_model_b2_dict[line] = lorentzian_1p_v(self.velocity_dict[line], self.x0_b2, self.sigma_b2, broad_amp[1])
+                            # if line in self.lmsks_dict.keys():
+                            #     self.residual_c_dict[line] = residual_3p_gl_v_c(params_line, self.velocity_c_dict[line], self.flux_v_c_dict[line], self.err_v_c_dict[line])
                         else:
                             self.residual_dict[line] = residual_3p_v_c(params_line, self.velocity_dict[line], self.flux_v_dict[line], self.err_v_dict[line])
                             self.best_model_n_dict[line] = gaussian_1p_v(self.velocity_dict[line], self.x0_e, self.sigma_e, amp[0])
                             self.best_model_b_dict[line] = gaussian_1p_v(self.velocity_dict[line], self.x0_b, self.sigma_b, broad_amp[0])
                             self.best_model_b2_dict[line] = gaussian_1p_v(self.velocity_dict[line], self.x0_b2, self.sigma_b2, broad_amp[1])
+                            # if line in self.lmsks_dict.keys():
+                            #     self.residual_c_dict[line] = residual_3p_v_c(params_line, self.velocity_c_dict[line], self.flux_v_c_dict[line], self.err_v_c_dict[line])
                 # single line profile with emission+absorption components
                 if (line in self.absorption_lines) and (line not in self.broad_wings_lines):
                     abs_amp = [self.amps_dict[f"{line.split(' ')[1]}_abs"]]
@@ -636,6 +684,8 @@ class line_fitting_exec():
                     self.residual_dict[line] = residual_2p_gl_v_c(params_line, self.velocity_dict[line], self.flux_v_dict[line], self.err_v_dict[line])
                     self.best_model_em_dict[line] = gaussian_1p_v(self.velocity_dict[line], self.x0_e, self.sigma_e, amp[0])   
                     self.best_model_ab_dict[line] = lorentzian_1p_v(self.velocity_dict[line], self.x0_a, self.sigma_a, abs_amp[0])
+                    # if line in self.lmsks_dict.keys():
+                    #     self.residual_c_dict[line] = residual_2p_gl_v_c(params_line, self.velocity_c_dict[line], self.flux_v_c_dict[line], self.err_v_c_dict[line])
             # append the line chi2 to the chi2 dict
             dof = self.galaxy4.best_res.nfree # degree of freedom = num_of_data - num_of_params
             self.redchi2_dict[line] = np.sum(self.residual_dict[line]**2) / dof
@@ -1234,16 +1284,6 @@ class line_fitting_exec():
                 axes[0,i].set_ylabel(r'Normalized Flux',size = 22)
             ymin = 0.9 * min(self.flux_plus_cont_v_dict[line]/np.max(self.flux_plus_cont_v_dict[line]))
             ymax = 1.1
-            # plot the masked regions
-            try:
-                lmsks = self.lmsks_dict[line]
-                if len(lmsks) >= 1:
-                    for ml in lmsks:
-                        x_lmsk = np.linspace(ml['w0'], ml['w1'], 100)
-                        v_lmsk = (x_lmsk / chosen_line_wave - 1) * self.c
-                        axes[0,i].fill_between(v_lmsk, ymin, ymax, alpha=0.3, zorder=1, facecolor='orange')
-            except KeyError:
-                print("\nno masked regions to plot.")
             axes[0,i].set_ylim(ymin, ymax)
             # axes[0,i].legend(loc='upper left', fontsize = 13, framealpha = 0)
             # lower panel for plotting the residual
@@ -1252,6 +1292,20 @@ class line_fitting_exec():
             axes[1,i].set_xlabel(r'Velocity $\mathrm{(km \ s^{-1})}$',size = 22)
             if i == 0:
                 axes[1,i].set_ylabel(r'Residual',size = 22)
+            ymin2 = 1.05 * min(self.residual_dict[line])
+            ymax2 = 1.05 * max(self.residual_dict[line])
+            axes[1,i].set_ylim(ymin2, ymax2)
+            # plot the masked regions
+            try:
+                lmsks = self.lmsks_dict[line]
+                if len(lmsks) >= 1:
+                    for ml in lmsks:
+                        x_lmsk = np.linspace(ml['w0'], ml['w1'], 100)
+                        v_lmsk = (x_lmsk / chosen_line_wave - 1) * self.c
+                        axes[0,i].fill_between(v_lmsk, ymin, ymax, alpha=0.3, zorder=1, facecolor='orange')
+                        axes[1,i].fill_between(v_lmsk, ymin2, ymax2, alpha=0.3, zorder=1, facecolor='orange')
+            except KeyError:
+                print("\nno masked regions to plot.")
         # whether to save the figure
         if savefig:
             # define the current working directory

@@ -52,7 +52,7 @@ wave = np.load(current_direc + '/example_inputs/wave_grid.npy')
 # run the fitting result for each selected line profile
 # redshift of the galaxy
 redshift = 0.01287
-# whether the spectrum is in "vacuum" or "air" wavelength space
+# whether the spectrum is in "vac" or "air" wavelength space
 vac_or_air = 'air'
 # the order of fitting local continuum level
 fit_cont_order = 1

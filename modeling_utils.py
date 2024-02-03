@@ -308,9 +308,9 @@ def gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_
         if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 1:
             x0_1, sigma_1, a_1, a_2 = params[5:9]
             x0_2, sigma_2, a_3 = params[9:12]
-            model_line1 += gaussian_1p_v(x1, x0_1, sigma_1, a_1)
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
-            model += gaussian_1p_v(x1, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
 
         if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 3:
             x0_1, sigma_1, a_1 = params[5:8]
@@ -442,9 +442,9 @@ def gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second
         if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 1:
             x0_1, sigma_1, a_1, a_2 = params[5:9]
             x0_2, sigma_2, a_3 = params[9:12]
-            model_line1 += gaussian_1p_v(x1, x0_1, sigma_1, a_1)
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
-            model += gaussian_1p_v(x1, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
 
         if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 3:
             x0_1, sigma_1, a_1 = params[5:8]

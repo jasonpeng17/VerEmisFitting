@@ -18,7 +18,7 @@ wave = np.load(current_direc + '/example_inputs/wave_grid.npy') # wavelength arr
 # run the fitting result for each selected line profile
 # redshift of the galaxy
 redshift = 0.01287
-# whether the spectrum is in "vacuum" or "air" wavelength space
+# whether the spectrum is in "vac" or "air" wavelength space
 vac_or_air = 'air'
 # the order of fitting local continuum level
 fit_cont_order = 1
@@ -27,9 +27,9 @@ line_select_method = 'txt'
 # text file for selecting intended lines for fitting
 input_example_txt = current_direc + '/input_txt/line_selection_example.txt' 
 # whether to interactively determine the fitting window, local continuum regions, and masking lines 
-fit_window_gui = True # if False, use the default values 
+fit_window_gui = False # if False, use the default values 
 # whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is False (i.e., pop up the window)
-params_windows_gui = True # if False, use the default parameter initial values and corresponding ranges for each iteration
+params_windows_gui = False # if False, use the default parameter initial values and corresponding ranges for each iteration
 region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_name = data_fits, line_select_method = line_select_method, 
                            input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, params_windows_gui = params_windows_gui)
 

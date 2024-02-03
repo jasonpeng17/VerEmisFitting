@@ -15,7 +15,7 @@ from termcolor import colored
 import numpy as np
 
 class FittingWindow:
-    def __init__(self, wave, flux, fits_name = None, line_name = None):
+    def __init__(self, wave, flux, fits_name = None, line_name = None, indx = 0, bokeh_session = None):
         self.wave = wave # input wavelength arr
         self.flux = flux # input flux arr
         self.wave_lolim = np.nanmin(self.wave) # wavelength lower limit 
@@ -25,6 +25,11 @@ class FittingWindow:
         self.plot_height = 600 # plot height for bokeh figure
         self.fits_name = fits_name # fits name 
         self.line_name = line_name # name of the selected line(s)
+        self.indx = indx # if indx = 0, then generate a new bokeh server
+        if self.indx == 0:
+            self.session = self.start_bokeh() # initialize the bokeh server
+        else:
+            self.session = bokeh_session # a given bokeh session
 
     # @staticmethod
     def ensure_bokeh_server(self):
@@ -54,7 +59,6 @@ class FittingWindow:
         self.ensure_bokeh_server()
         # session = pull_session(session_id='fitting_window', url='http://localhost:5006')
         session = pull_session()
-        # self.logger.info("Enabling BOKEH plots")
         p = figure()
         c = column(children=[p])
         session.document.clear()
@@ -242,7 +246,6 @@ class FittingWindow:
         print(colored(f"Hover the cursor over spectrum to find wavelengths. \n", 'green', attrs=['bold']))
 
         done = False # initialize the done value to be False 
-        self.session = self.start_bokeh() # initialize the bokeh server
         # find local continuum region file
         cont, conthdr = self.find_local_cont_file(self.line_name)
         if len(cont) == 1:
