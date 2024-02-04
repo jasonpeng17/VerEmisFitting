@@ -30,7 +30,12 @@ input_example_txt = current_direc + '/input_txt/line_selection_example.txt'
 fit_window_gui = False # if False, use the default values 
 # whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is False (i.e., pop up the window)
 params_windows_gui = False # if False, use the default parameter initial values and corresponding ranges for each iteration
-region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_name = data_fits, line_select_method = line_select_method, 
+# define the folder name 
+folder_name = data_fits.split('/')[-1][:-5] # if None, then a tk window will pop up for users to interactively enter the folder name; if users forget to type the folder name in the tk window,
+                                            # the default folder name is "test_folder".
+# define the file name
+file_name = "test" # if None, then file_name = folder_name; else, file_name will be f"{folder_name}_{file_name}"
+region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, folder_name = folder_name, file_name = file_name, line_select_method = line_select_method, 
                            input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, params_windows_gui = params_windows_gui)
 
 # "n_iteration = 1000" defines the number of iterations you want to run
@@ -40,7 +45,7 @@ region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_na
 # "save_flux_table = True" defines if you want to save the best-fitting flux pandas table for each line.
 # "save_ew_table = True" defines if you want to save the best-fitting equivalent width pandas table for each line.
 # "save_sigma_table = True" defines if you want to save the best-fitting velocity width pandas table for each velocity component.
-region.all_lines_result(wave, spec, err, n_iteration = 1000, get_flux = True, save_flux_table = True, get_ew = True, save_ew_table = True, get_error = True, save_par_table = True)
+region.all_lines_result(wave, spec, err, n_iteration = 100, get_flux = True, save_flux_table = True, get_ew = True, save_ew_table = True, get_error = True, save_par_table = True)
 
 # plot the fitting result
 # "savefig = True" defines if you want to save the fitting result as a .pdf file.

@@ -15,7 +15,7 @@ from termcolor import colored
 import numpy as np
 
 class FittingWindow:
-    def __init__(self, wave, flux, fits_name = None, line_name = None, indx = 0, bokeh_session = None):
+    def __init__(self, wave, flux, folder_name = None, line_name = None, indx = 0, bokeh_session = None):
         self.wave = wave # input wavelength arr
         self.flux = flux # input flux arr
         self.wave_lolim = np.nanmin(self.wave) # wavelength lower limit 
@@ -23,7 +23,7 @@ class FittingWindow:
         self.yrange = [np.nanmin(self.flux) * 0.8, np.max(self.flux) * 1.2] # flux range for plotting
         self.plot_width = 1200 # plot width for bokeh figure
         self.plot_height = 600 # plot height for bokeh figure
-        self.fits_name = fits_name # fits name 
+        self.folder_name = folder_name # folder name 
         self.line_name = line_name # name of the selected line(s)
         self.indx = indx # if indx = 0, then generate a new bokeh server
         if self.indx == 0:
@@ -87,7 +87,7 @@ class FittingWindow:
     def find_local_cont_file(self, line_name):
         # Look for local continum region file
         # first in local directory
-        cont_file_path = os.path.join(os.getcwd(), f'cont_dir/{self.fits_name}')
+        cont_file_path = os.path.join(os.getcwd(), f'cont_dir/{self.folder_name}')
         if not os.path.exists(cont_file_path):
             os.makedirs(cont_file_path)
         self.local_contfile = os.path.join(cont_file_path, f"{line_name.split(' ')[0]}_{line_name.split(' ')[1]}.cont") # assume the local cont file is in the local folder cont_dir
@@ -140,7 +140,7 @@ class FittingWindow:
     def find_local_lmsk_file(self, line_name):
         # Look for mask data file
         # first in local directory
-        lmsk_file_path = os.path.join(os.getcwd(), f'lmsk_dir/{self.fits_name}')
+        lmsk_file_path = os.path.join(os.getcwd(), f'lmsk_dir/{self.folder_name}')
         if not os.path.exists(lmsk_file_path):
             os.makedirs(lmsk_file_path)
         self.local_lmfile = os.path.join(lmsk_file_path, f"{line_name.split(' ')[0]}_{line_name.split(' ')[1]}.lmsk") # assume the lmsk file is in the local folder lmsk_dir
@@ -207,7 +207,7 @@ class FittingWindow:
             # lmsk_file_path = os.path.join(os.getcwd(), f'lmsk_dir')
             # if not os.path.exists(lmsk_file_path):
             #     os.makedirs(lmsk_file_path)
-            # local_lmfile = os.path.join(lmsk_file_path, f'{self.fits_name}.lmsk')
+            # local_lmfile = os.path.join(lmsk_file_path, f'{self.folder_name}.lmsk')
             with open(self.local_lmfile, 'w') as lmf:
                 for lmh in lmhdr:
                     lmf.write(lmh)
@@ -372,7 +372,7 @@ if __name__ == "__main__":
     redshift = 0.01287
 
     # initialize the class
-    Fitting_Window = FittingWindow(wave, spec, fits_name = 'j1044+0353_addALL_icubes_wn')
+    Fitting_Window = FittingWindow(wave, spec, folder_name = 'j1044+0353_addALL_icubes_wn')
 
     x0 = 5007 * (1. + redshift)  # Example central wavelength (e.g., H-alpha line)
     x1, x2 = 4970 * (1. + redshift), 5050 * (1. + redshift)  # Initial guesses for the fitting window

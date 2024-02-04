@@ -32,8 +32,8 @@ from analysis_utils import *
 from IPython import embed
 
 class line_fitting_exec():
-    def __init__(self, redshift = None, vac_or_air = 'air', seed = 42, fits_name = None, line_select_method = 'gui', input_txt = None, fit_cont_order = 1, fit_window_gui = False, 
-                 params_windows_gui = True):
+    def __init__(self, redshift = None, vac_or_air = 'air', seed = 42, folder_name = None, file_name = None, line_select_method = 'gui', input_txt = None, 
+                 fit_cont_order = 1, fit_window_gui = False, params_windows_gui = True):
         """
         Constructor for the line_fitting_exec class that initializes the following class variables:
         
@@ -113,8 +113,16 @@ class line_fitting_exec():
             # get the initial guess, range size for each parameter, and also the fixed ratios for selected amplitude pairs
             self.initial_guess_dict, self.param_range_dict, self.amps_ratio_dict = fit_window.run()
 
+        # get the folder name from user input
+        if folder_name != None:
+            self.folder_name = folder_name 
+        else:
+            self.folder_name = Querybox.get_string(title="Input", prompt="Please enter a subfolder name for your saved results:", initialvalue="")
+            if not self.folder_name: # when users forget to enter the folder name
+                self.folder_name = "test_folder" # default folder name
+
         # get the name of the input fits file (excluding .fits)
-        self.fits_name = fits_name.split('/')[-1][:-5] if fits_name != None else None
+        self.file_name = f"{self.folder_name}_{file_name}" if file_name != None else self.folder_name
 
         # initialize the line-continuum dict for all intended lines
         self.cont_line_dict = dict()
@@ -200,17 +208,17 @@ class line_fitting_exec():
         if self.fit_window_gui:
             # initialize a gui for determining fitting window 
             if indx == 0:
-                Fitting_Window = FittingWindow(wave_c, spec_c, fits_name = self.fits_name, line_name = selected_line, indx = indx)
+                Fitting_Window = FittingWindow(wave_c, spec_c, folder_name = self.folder_name, line_name = selected_line, indx = indx)
                 self.bokeh_session = Fitting_Window.session 
             else:
-                Fitting_Window = FittingWindow(wave_c, spec_c, fits_name = self.fits_name, line_name = selected_line, indx = indx, bokeh_session = self.bokeh_session)
+                Fitting_Window = FittingWindow(wave_c, spec_c, folder_name = self.folder_name, line_name = selected_line, indx = indx, bokeh_session = self.bokeh_session)
             # new boundary and line mask lists
             boundary, lmasks = Fitting_Window.run_process(central_wave, wave_c[indx_lolim], wave_c[indx_uplim], cont_fit[0][1], cont_fit[1][0], mask_lines = True)
             # extract new fit window
             new_fit_window_indx = np.where((wave_c >= boundary[0]) & (wave_c <= boundary[1]))
             cont_fit = [[boundary[0], boundary[2]],[boundary[3], boundary[1]]]
         else: # find if there are any local lmask file
-            Fitting_Window = FittingWindow(wave_c, spec_c, fits_name = self.fits_name, line_name = selected_line, indx = 1) # a random indx number (!= 0) to not start bokeh server
+            Fitting_Window = FittingWindow(wave_c, spec_c, folder_name = self.folder_name, line_name = selected_line, indx = 1) # a random indx number (!= 0) to not start bokeh server
             lmasks, _ = Fitting_Window.find_local_lmsk_file(selected_line)
             cont_dict, _ = Fitting_Window.find_local_cont_file(selected_line)
             if len(cont_dict) == 1:
@@ -878,19 +886,6 @@ class line_fitting_exec():
                         except TypeError:
                             self.flux_abs_err_dict[line] = np.nan
 
-        # define the subfolder name for saving the results
-        if save_ew_table or save_flux_table or save_par_table:
-            # Create the main window (though it won't be shown)
-            # root = tk.Tk()
-            # root.withdraw()  # Hides the main window
-            # Prompt the user for input with a default value
-            # self.folder_name = askstring("Input", "Please enter a subfolder name for your saved results:", initialvalue="")
-            self.folder_name = Querybox.get_string(
-                title="Input", 
-                prompt="Please enter a subfolder name for your saved results:",
-                initialvalue=""
-            )
-
         # return the ew of each balmer line in wavelength space
         if get_ew:
             self.find_ew(save_ew_table = save_ew_table)
@@ -910,7 +905,6 @@ class line_fitting_exec():
                 return self.flux_dict
 
         return self.galaxy4.best_params
-
 
     def save_par_pd_table(self):
         # Define col names
@@ -942,15 +936,12 @@ class line_fitting_exec():
         self.par_df = pd.concat(dfs)
             
         # Define the parent directory for the flux table
-        if self.folder_name:
-            directory = f"parameter_tables/{self.folder_name}/"
-        if not self.folder_name:
-            directory = f"parameter_tables/{self.fits_name}/"
+        directory = f"parameter_tables/{self.folder_name}/"
         # Create directory if it does not exist
         if not os.path.exists(directory):
             os.makedirs(directory)
         # Save the whole DataFrame to a CSV file in the directory
-        self.par_df.to_csv(os.path.join(directory, self.fits_name + '_parameters.csv'))
+        self.par_df.to_csv(os.path.join(directory, self.file_name + '_parameters.csv'))
 
     def save_flux_pd_table(self):
         '''
@@ -974,15 +965,12 @@ class line_fitting_exec():
         print(self.flux_df)
 
         # Define the parent directory for the flux table
-        if self.folder_name:
-            directory = f"flux_tables/{self.folder_name}/"
-        if not self.folder_name:
-            directory = f"flux_tables/{self.fits_name}/"
+        directory = f"flux_tables/{self.folder_name}/"
         # Create directory if it does not exist
         if not os.path.exists(directory):
             os.makedirs(directory)
         # Save the whole DataFrame to a CSV file in the directory
-        self.flux_df.to_csv(os.path.join(directory, self.fits_name + '_flux.csv'))
+        self.flux_df.to_csv(os.path.join(directory, self.file_name + '_flux.csv'))
 
     def save_ew_pd_table(self):
         '''
@@ -1007,15 +995,12 @@ class line_fitting_exec():
         })
         print(self.ew_df)
         # define the parent directory for the ew table
-        if self.folder_name:
-            directory = f"ew_tables/{self.folder_name}/"
-        if not self.folder_name:
-            directory = f"ew_tables/{self.fits_name}/"
+        directory = f"ew_tables/{self.folder_name}/"
         # Create parent directory if it does not exist
         if not os.path.exists(directory):
             os.makedirs(directory)
         # Save the whole DataFrame to a CSV file in the parent directory
-        self.ew_df.to_csv(os.path.join(directory, self.fits_name + '_ew.csv'))
+        self.ew_df.to_csv(os.path.join(directory, self.file_name + '_ew.csv'))
 
 
     def find_ew(self, save_ew_table = False):
@@ -1305,36 +1290,17 @@ class line_fitting_exec():
                         axes[0,i].fill_between(v_lmsk, ymin, ymax, alpha=0.3, zorder=1, facecolor='orange')
                         axes[1,i].fill_between(v_lmsk, ymin2, ymax2, alpha=0.3, zorder=1, facecolor='orange')
             except KeyError:
-                print("\nno masked regions to plot.")
+                print(f"\nno masked regions to plot for {line}.")
         # whether to save the figure
         if savefig:
             # define the current working directory
             current_direc = os.getcwd()
-            # find whether the folder name exists or not
-            try:
-                self.folder_name
-            except:
-                # Create the main window (though it won't be shown)
-                # root = tk.Tk()
-                # root.withdraw()  # Hides the main window
-                # Prompt the user for input with a default value
-                # self.folder_name = askstring("Input", "Please enter a subfolder name for your saved results:", initialvalue="")
-                # Prompt the user for input with a default value using ttkbootstrap's get_string
-                self.folder_name = Querybox.get_string(
-                    title="Input", 
-                    prompt="Please enter a subfolder name for your saved results:",
-                    initialvalue=""
-                )
             # define the results directory based on the sub-folder name
-            if self.folder_name:
-                results_dir = os.path.join(current_direc, f"plots/{self.folder_name}/")
-            if not self.folder_name:
-                results_dir = os.path.join(current_direc, f"plots/{self.fits_name}/")
-            # results_dir = os.path.join(current_direc, 'plots/HeII/')
-            if not os.path.isdir(results_dir):
-                os.mkdir(results_dir)
+            results_dir = os.path.join(current_direc, f"plots/{self.folder_name}/")
+            if not os.path.exists(results_dir):
+                os.makedirs(results_dir)
             # define the filename and save it in the sub-directory output_files
-            filepath = os.path.join(results_dir, self.fits_name + '_fittings.pdf')
+            filepath = os.path.join(results_dir, self.file_name + '_fittings.pdf')
             fig.savefig(filepath, dpi=300, bbox_inches='tight')
         plt.clf() # not showing the matplotlib figure; check the "plots" folder
 

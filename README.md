@@ -64,7 +64,12 @@ input_example_txt = current_direc + '/input_txt/line_selection_example.txt'
 fit_window_gui = True # if False, use the default values 
 # whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is False (i.e., pop up the window)
 params_windows_gui = True # if False, use the default parameter initial values and corresponding ranges for each iteration
-region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, fits_name = data_fits, line_select_method = line_select_method, 
+# define the folder name 
+folder_name = data_fits.split('/')[-1][:-5] # if None, then a tk window will pop up for users to interactively enter the folder name; if users forget to type the folder name in the tk window,
+                                            # the default folder name is "test_folder".
+# define the file name
+file_name = "test" # if None, then file_name = folder_name; else, file_name will be f"{folder_name}_{file_name}"
+region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, folder_name = folder_name, file_name = file_name, line_select_method = line_select_method, 
                            input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, params_windows_gui = params_windows_gui)
 
 # "n_iteration = 1000" defines the number of iterations you want to run
@@ -112,7 +117,7 @@ After adding a particular line to both wavelength files, users should also add t
 
 4. **Refitting with Saved Settings**: For refitting the same selected lines, the saved `.cont` and `.lmsk` files will be loaded to recreate the previously chosen fitting window, local continuum regions, and masked regions. Therefore, you can set `fit_window_gui = False` in the `line_fitting_exec` class. 
 
-5. **(Optional) Potential Application to IFU Data**: Importing the VerEmisFitting package for fitting spectra extracted from IFU data can be time-consuming and redundant, as it requires repeatedly clicking buttons in every pop-up GUI for each spectrum. Therefore, it is recommended to set `line_select_method = 'txt'`, `fit_window_gui = False`, and `params_window_gui = False`. The first two parameters are illustrated in the previous steps. The last parameter (`params_window_gui`) controls whether to interactively determine the initial values and ranges of parameters for each iteration. With this setup, no interactive GUI will pop up; thus, it is essential to ensure that the default configuration adequately fits your data.
+5. **(Optional) Potential Application to IFU Data**: Importing the VerEmisFitting package for fitting spectra extracted from IFU data can be time-consuming and redundant, as it requires repeatedly clicking buttons in every pop-up GUI for each spectrum. Therefore, it is recommended to set `line_select_method = 'txt'`, `fit_window_gui = False`, and `params_window_gui = False`. The first two parameters are illustrated in the previous steps. The last parameter (`params_window_gui`) controls whether to interactively determine the initial values and ranges of parameters for each iteration. With this setup, no interactive GUI will pop up; thus, it is essential to ensure that the default configuration adequately fits your data. For each extracted spectrum from the IFU data cube, it is recommended to assign a unique file name, `file_name`, within the `line_fitting_exec` class to ensure the saved products are uniquely named.
 
 
 
