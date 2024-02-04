@@ -208,6 +208,58 @@ class line_fitting_model():
                     residuals_all.append(residual_2p_gl_v_c(params_line, x, y, yerr))
         return np.concatenate(residuals_all)
 
+    def print_best_fit_params(self, x0_e, sigma_e, amps, x0_b=None, sigma_b=None, x0_b2=None, sigma_b2=None, x0_a=None, sigma_a=None, 
+                              broad_wing=False, absorption=False, double_gauss=False, triple_gauss=False):
+        # Printing velocity centers
+        velocity_centers = f"velocity center (in km/s): x0_e = {x0_e:.3f}"
+        if broad_wing:
+            velocity_centers += f", x0_b = {x0_b:.3f}"
+            if triple_gauss:
+                velocity_centers += f", x0_b2 = {x0_b2:.3f}"
+        if absorption:
+            velocity_centers += f", x0_a = {x0_a:.3f}"
+        print(velocity_centers)
+        
+        # Printing velocity widths
+        velocity_widths = f"velocity width (in km/s): sigma_e = {sigma_e:.3f}"
+        if broad_wing:
+            velocity_widths += f", sigma_b = {sigma_b:.3f}"
+            if triple_gauss:
+                velocity_widths += f", sigma_b2 = {sigma_b2:.3f}"
+        if absorption:
+            velocity_widths += f", sigma_a = {sigma_a:.3f}"
+        print(velocity_widths)
+        
+        print(r"line amplitude (in Flam units):")
+        for line in self.emission_lines:
+            self.print_line_amplitude(line, amps, broad_wing, absorption, double_gauss, triple_gauss)
+
+    def print_line_amplitude(self, line, amps, broad_wing, absorption, double_gauss, triple_gauss):
+        line_parts = line.split(' ')[1]
+        components = line_parts.split('&') if '&' in line_parts else [line_parts]
+        
+        amplitude_values = []
+        for component in components:
+            base_amp = amps.get(component, 0)
+            amplitude_values.append(f"{base_amp:.3f}")
+            
+            if broad_wing:
+                if double_gauss or triple_gauss:
+                    amp_b = amps.get(f"{component}_b", 0)
+                    if amp_b:
+                        amplitude_values.append(f"{amp_b:.3f}")
+                if triple_gauss:
+                    amp_b2 = amps.get(f"{component}_b2", 0)
+                    if amp_b2:
+                        amplitude_values.append(f"{amp_b2:.3f}")
+            if absorption:
+                amp_abs = amps.get(f"{component}_abs", 0)
+                if amp_abs:
+                    amplitude_values.append(f"{amp_abs:.3f}")
+        
+        # Joining all amplitude values into a single string for the line
+        amplitude_str = ", ".join(amplitude_values)
+        print(f"{line_parts}: [{amplitude_str}]")
 
     def assign_best(self, model_dict, x0_e, sigma_e, amps, x0_b=None, sigma_b=None, x0_b2=None, sigma_b2=None, x0_a=None, sigma_a=None, 
                     broad_wing=False, absorption=False, double_gauss=False, triple_gauss=False):
@@ -272,7 +324,8 @@ class line_fitting_model():
         print(colored("The current best chi2 value is ", 'green'))
         print("{0:.5f}".format(self.best_chi2))
         print(colored("The current best parameter values are ", 'green'))
-        print(self.best_params)
+        self.print_best_fit_params(x0_e, sigma_e, amps, x0_b=x0_b, sigma_b=sigma_b, x0_b2=x0_b2, sigma_b2=sigma_b2, x0_a=x0_a, sigma_a=sigma_a, 
+                                   broad_wing=broad_wing, absorption=absorption, double_gauss=double_gauss, triple_gauss=triple_gauss)
 
     def check_and_assign_best(self, model_dict, x0_e, sigma_e, amps, x0_b=None, sigma_b=None, x0_b2=None, sigma_b2=None,
                               x0_a=None, sigma_a=None, absorption=False, broad_wing=False, double_gauss=False, triple_gauss=False):
