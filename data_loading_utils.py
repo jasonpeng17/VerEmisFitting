@@ -64,7 +64,28 @@ def read_window_width_from_file(filename):
                 print(f"Warning: Unable to parse '{line.strip()}' as a valid entry.")
     return v_width_half_dict
 
-def extract_line_pars(filename):
+def extract_amps_ratio(amp_num_list, amp_den_list, ratio_list, double_gauss_list, triple_gauss_list):
+    """
+    Extract sets of lines that have fixed amplitude ratios from amp_num_list, amp_den_list, and ratio_list.
+    """
+    # initialize the returned dictionary
+    amps_ratio_dict = dict()
+    for amp_num, amp_den, ratio in zip(amp_num_list, amp_den_list, ratio_list):
+        if ((amp_num in double_gauss_list) and (amp_den in double_gauss_list)) or \
+           ((amp_num in double_gauss_list) and (amp_den in triple_gauss_list)) or \
+           ((amp_num in triple_gauss_list) and (amp_den in double_gauss_list)): # two velocity components
+            line_comps = ["", "_b"]
+        elif (amp_num in triple_gauss_list) and (amp_den in triple_gauss_list): # three velocity components
+            line_comps = ["", "_b", "_b2"]
+        else: # single velocity component
+            line_comps = [""]
+        for line_comp in line_comps:
+            amp_num_comp = amp_num.split(" ")[1] + line_comp
+            amp_den_comp = amp_den.split(" ")[1]+ line_comp
+            amps_ratio_dict[f"ratio_{amp_num_comp}_over_{amp_den_comp}"] = ratio
+    return amps_ratio_dict
+
+def extract_line_pars(filename, return_amps_fixed_dict = False):
     """
     Extract line parameters from a given file for the FitParamsWindow class.
 
@@ -74,6 +95,7 @@ def extract_line_pars(filename):
 
     Parameters:
     - filename (str): Name of the file containing the line parameters.
+    - return_amps_fixed_dict (bool): Return the dictionary that contains the lines with fixed amplitude ratios.
 
     Returns:
     - dict: Dictionary containing the extracted line parameters.
@@ -93,7 +115,10 @@ def extract_line_pars(filename):
         'absorption_lines': None,
         'double_gauss_broad': None,
         'triple_gauss_broad': None,
-        'lorentz_bw_lines': None
+        'lorentz_bw_lines': None,
+        'amp_num_lines' : None,
+        'amp_den_lines' : None,
+        'amp_fixed_ratio': None
     }
 
     with open(filename, 'r') as file:
@@ -104,7 +129,7 @@ def extract_line_pars(filename):
 
             for parameter in parameters.keys():
                 if parameter in line:
-                    if 'None' in line and 'lines' in parameter:
+                    if 'None' in line and ('lines' in parameter or 'ratio' in parameter):
                         parameters[parameter] = []
                     elif 'None' in line:
                         parameters[parameter] = None
@@ -112,7 +137,16 @@ def extract_line_pars(filename):
                         parameters[parameter] = True if 'True' in line else False
                     elif parameter == 'fitting_method':
                         parameters[parameter] = re.search(r'fitting_method = "(.*?)"', line).group(1)
+                    elif parameter == "amp_fixed_ratio":
+                        parameters[parameter] = [float(ratio) for ratio in re.findall(r"[-+]?\d*\.\d+|\d+", line)]
                     else:
                         parameters[parameter] = re.findall(r"'(.*?)'", line)
 
-    return parameters
+    # return the fixed amplitude ratio dictionary
+    if return_amps_fixed_dict:
+        double_gauss_list, triple_gauss_list = parameters['double_gauss_lines'], parameters['triple_gauss_lines']
+        amp_num_list, amp_den_list, ratio_list = parameters['amp_num_lines'], parameters['amp_den_lines'], parameters['amp_fixed_ratio']
+        amps_ratio_dict = extract_amps_ratio(amp_num_list, amp_den_list, ratio_list, double_gauss_list, triple_gauss_list)
+        return parameters, amps_ratio_dict
+    else:
+        return parameters

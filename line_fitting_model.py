@@ -211,7 +211,7 @@ class line_fitting_model():
     def print_best_fit_params(self, x0_e, sigma_e, amps, x0_b=None, sigma_b=None, x0_b2=None, sigma_b2=None, x0_a=None, sigma_a=None, 
                               broad_wing=False, absorption=False, double_gauss=False, triple_gauss=False):
         # Printing velocity centers
-        velocity_centers = f"velocity center (in km/s): x0_e = {x0_e:.3f}"
+        velocity_centers = colored(f"velocity center (in km/s):", 'black', attrs=['underline']) + f" x0_e = {x0_e:.3f}"
         if broad_wing:
             velocity_centers += f", x0_b = {x0_b:.3f}"
             if triple_gauss:
@@ -221,7 +221,7 @@ class line_fitting_model():
         print(velocity_centers)
         
         # Printing velocity widths
-        velocity_widths = f"velocity width (in km/s): sigma_e = {sigma_e:.3f}"
+        velocity_widths = colored(f"velocity width (in km/s):", 'black', attrs=['underline']) + f" sigma_e = {sigma_e:.3f}"
         if broad_wing:
             velocity_widths += f", sigma_b = {sigma_b:.3f}"
             if triple_gauss:
@@ -230,7 +230,8 @@ class line_fitting_model():
             velocity_widths += f", sigma_a = {sigma_a:.3f}"
         print(velocity_widths)
         
-        print(r"line amplitude (in Flam units):")
+        # Printing line amplitudes
+        print(colored(r"line amplitude (in Flam units):", 'black', attrs=['underline']))
         for line in self.emission_lines:
             self.print_line_amplitude(line, amps, broad_wing, absorption, double_gauss, triple_gauss)
 
@@ -501,7 +502,7 @@ class line_fitting_model():
 
             # obtain the best result of this iteration
             self.result = minimize(self.residual_v_f_all, self.params, args=(velocity_dict, flux_v_dict, err_v_dict, self.absorption_lines, self.broad_wings_lines, 
-                                                                             self.double_gauss_lines, self.triple_gauss_lines))
+                                                                             self.double_gauss_lines, self.triple_gauss_lines), method = "leastsq", calc_covar = True)
             self.param_dict = self.result.params.valuesdict()
             # obtain the best-fitting velocity center and width of each component
             x0_e = self.param_dict["center_e"]

@@ -94,7 +94,10 @@ class line_fitting_exec():
 
         # users need to input a line selection text for this approach
         if line_select_method == 'txt':
-            line_select_pars = extract_line_pars(input_txt)
+            if self.params_windows_gui:
+                line_select_pars = extract_line_pars(input_txt, return_amps_fixed_dict = False)
+            else:
+                line_select_pars, self.amps_ratio_dict = extract_line_pars(input_txt, return_amps_fixed_dict = True)
             # selected lines and the selected fitting method
             self.selected_lines = line_select_pars['selected_lines']
             self.fitting_method = line_select_pars['fitting_method']
@@ -111,7 +114,10 @@ class line_fitting_exec():
             # Call FitParamsWindow
             fit_window = FitParamsWindow(self.selected_lines, self.broad_wings_lines, self.triple_gauss_lines, self.absorption_lines, params_windows_gui = self.params_windows_gui)
             # get the initial guess, range size for each parameter, and also the fixed ratios for selected amplitude pairs
-            self.initial_guess_dict, self.param_range_dict, self.amps_ratio_dict = fit_window.run()
+            if self.params_windows_gui:
+                self.initial_guess_dict, self.param_range_dict, self.amps_ratio_dict = fit_window.run()
+            else:
+                self.initial_guess_dict, self.param_range_dict, _ = fit_window.run()
 
         # get the folder name from user input
         if folder_name != None:
@@ -224,7 +230,9 @@ class line_fitting_exec():
             if len(cont_dict) == 1:
                 for ct in cont_dict:
                     x1, x2, x3, x4 = ct['x1'], ct['x2'], ct['x3'], ct['x4']
-            cont_fit = [[x1, x3],[x4, x2]]
+                cont_fit = [[x1, x3],[x4, x2]]
+            else:
+                x1, x2 = cont_fit[0][0], cont_fit[1][1]
             # extract new fit window
             new_fit_window_indx = np.where((wave_c >= x1) & (wave_c <= x2))
         # new wave, flux, and err arrays
@@ -251,6 +259,7 @@ class line_fitting_exec():
         # fit the local continuum level and extract it from the flux array
         cont_f_fit, cont_f_fit_err = self.region_around_line(wave_fit, flux_fit, cont_fit, order = self.fit_cont_order)[-3:-1]
         self.cont_line_dict[selected_line] = np.array([cont_f_fit, cont_f_fit_err])
+        # local-continuum-subtracted spectrum
         flux_sc_fit = flux_fit - cont_f_fit
         # error propagation
         err_sc_fit = np.sqrt((err_fit)**2 + (cont_f_fit_err)**2)

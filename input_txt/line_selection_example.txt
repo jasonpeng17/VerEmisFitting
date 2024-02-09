@@ -34,4 +34,10 @@ triple_gauss_broad = True # sigma_3 > sigma_2 > sigma_1
 # lines that have an absorption component (needs quotation marks for the selected lines)
 absorption_lines = None
 
+# set fixed amplitude ratios between two sets of lines (ratio = amp_num / amp_den)
+amp_num_lines = None
+amp_den_lines = None
+amp_fixed_ratio = None
+
+
 
