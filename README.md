@@ -78,8 +78,11 @@ region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, folder_
 # "get_ew = True" defines if you want to calculate the ew(s) of the selected emission lines (including emission and absorption ew(s))
 # "save_flux_table = True" defines if you want to save the best-fitting flux pandas table for each line.
 # "save_ew_table = True" defines if you want to save the best-fitting equivalent width pandas table for each line.
-# "save_sigma_table = True" defines if you want to save the best-fitting velocity width pandas table for each velocity component.
-region.all_lines_result(wave, spec, err, n_iteration = 1000, get_flux = True, save_flux_table = True, get_ew = True, save_ew_table = True, get_error = True, save_par_table = True)
+# "save_par_table = True" defines if you want to save the best-fitting parameter pandas table for each velocity component.
+# "save_stats_table = True" defines if you want to save the best-fitting statistics pandas table for each selected line.
+# "save_cont_params_table = True" defines if you want to save the best-fitting parameters for continuum fit for each line.
+region.all_lines_result(wave, spec, err, n_iteration = 100, get_flux = True, save_flux_table = True, get_ew = True, save_ew_table = True, get_error = True, 
+                        save_par_table = True, save_stats_table = True, save_cont_params_table = True)
 
 # plot the fitting result
 # "savefig = True" defines if you want to save the fitting result as a .pdf file.
@@ -98,6 +101,8 @@ Checking the line-fitting outputs:
 * If `save_flux_table = True`, the best-fitting line flux table is saved in the `flux_tables` subfolder.
 * If `save_ew_table = True`, the best-fitting equivalent width table is saved in the `ew_tables` subfolder.
 * If `save_par_table = True`, the best-fitting parameter table is saved in the `parameter_tables` subfolder.
+* If `save_stats_table = True`, the best-fitting statistics table is saved in the `stats_tables` subfolder.
+* If `save_cont_params_table = True`, the best-fitting parameter table for continuum fit is saved in the `cont_tables` subfolder.
 
 ## Include More Emission Lines / Modify Default Line-Fitting Window
 
