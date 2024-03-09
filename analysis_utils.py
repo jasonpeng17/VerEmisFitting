@@ -223,5 +223,25 @@ def local_cont_reg(wave_arr, indx_lolim, indx_uplim, fraction = 0.1):
     x3, x4 = np.nanpercentile(wave_fit_window, fraction * 100), np.nanpercentile(wave_fit_window, 100 - fraction * 100)
     return [[x1, x3],[x4, x2]]
 
+def aic_lmfit(chisqr, nvarys, ndata):
+    """Definition of AIC from LMFIT: https://github.com/astrodee/threadcount/
+       ndata * np.log(Chisqr/ndata) + 2 * nvarys."""
+    return ndata * np.log(chisqr/ndata) + 2 * nvarys
+
+def bic_lmfit(chisqr, nvarys, ndata):
+    """Definition of BIC from LMFIT: https://github.com/astrodee/threadcount/
+       ndata * np.log(Chisqr/ndata) + np.log(ndata) * nvarys."""
+    return ndata * np.log(chisqr/ndata) + np.log(ndata) * nvarys
+
+def aic_duvet(chisqr, nvarys):
+    """Definition of AIC from the DUVET survey: https://github.com/astrodee/threadcount/
+       Chisqr + 2 * nvarys."""
+    return chisqr + 2 * nvarys
+
+def bic_duvet(chisqr, nvarys, ndata):
+    """Definition of BIC from the DUVET survey: https://github.com/astrodee/threadcount/
+       Chisqr + np.log(ndata) * nvarys."""
+    return chisqr + np.log(ndata) * nvarys
+
 
 

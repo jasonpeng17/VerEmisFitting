@@ -4,7 +4,7 @@
 
 ## Installation
 
-For installing the astroconda-lmfit environment:
+For installing the ver_emis_fitting environment:
 
 1. With an environment definition YML file, users can build the environment with:
 ```
