@@ -459,7 +459,7 @@ class line_fitting_exec():
 
         # create a dict for x0 and sigma respectively
         self.x0_dict = {'x0_e': self.x0_e, 'x0_b': self.x0_b, 'x0_b2': self.x0_b2, 'x0_a': self.x0_a}
-        self.sigma_dict = {'sigma_e': self.sigma_e, 'sigma_b': self.sigma_b, 'sigma_b2': self.x0_b2, 'sigma_a': self.sigma_a}
+        self.sigma_dict = {'sigma_e': self.sigma_e, 'sigma_b': self.sigma_b, 'sigma_b2': self.sigma_b2, 'sigma_a': self.sigma_a}
 
         # get the dict that contains the best-fitting amplitudes for all lines
         self.amps_dict = self.line_fit_model.best_amps
