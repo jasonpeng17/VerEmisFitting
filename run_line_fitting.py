@@ -34,7 +34,7 @@ params_windows_gui = True # if False, use the default parameter initial values a
 folder_name = data_fits.split('/')[-1][:-5] # if None, then a tk window will pop up for users to interactively enter the folder name; if users forget to type the folder name in the tk window,
                                             # the default folder name is "test_folder".
 # define the file name
-file_name = "test_2" # if None, then file_name = folder_name; else, file_name will be f"{folder_name}_{file_name}"
+file_name = "test" # if None, then file_name = folder_name; else, file_name will be f"{folder_name}_{file_name}"
 # define the minimum velocity width (i.e., instrumental seeing) for each velocity component
 sigma_min = 30 # in km / s
 # define the maximum velocity width for each velocity component (for emissions)

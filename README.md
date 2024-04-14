@@ -49,7 +49,7 @@ spec = fits.open(data_fits)[0].data
 err = fits.open(err_fits)[0].data   
 wave = np.load(current_direc + '/example_inputs/wave_grid.npy')
 
-# run the fitting result for each selected line profile
+############################### INPUT PARAMETERS (run the fitting result for each selected line profile) 
 # redshift of the galaxy
 redshift = 0.01287
 # whether the spectrum is in "vac" or "air" wavelength space
@@ -69,8 +69,18 @@ folder_name = data_fits.split('/')[-1][:-5] # if None, then a tk window will pop
                                             # the default folder name is "test_folder".
 # define the file name
 file_name = "test" # if None, then file_name = folder_name; else, file_name will be f"{folder_name}_{file_name}"
+# define the minimum velocity width (i.e., instrumental seeing) for each velocity component
+sigma_min = 30 # in km / s
+# define the maximum velocity width for each velocity component (for emissions)
+sigma_max_e = 1200 # in km / s
+# define the maximum velocity width for each velocity component (for absorptions)
+sigma_max_a = 1500 # in km / s
+# define the algorithm used for fitting (the well-tested ones include ’leastsq’: Levenberg-Marquardt (default), ’nelder’: Nelder-Mead, and ’powell’: Powell)
+fit_algorithm = "leastsq"
+###############################
 region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, folder_name = folder_name, file_name = file_name, line_select_method = line_select_method, 
-                           input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, params_windows_gui = params_windows_gui)
+                           input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, params_windows_gui = params_windows_gui,
+                           sigma_min = sigma_min, sigma_max_e = sigma_max_e, sigma_max_a = sigma_max_a, fit_algorithm = fit_algorithm)
 
 # "n_iteration = 1000" defines the number of iterations you want to run
 # "get_flux = True" defines if you want the return to be the flux dict (includes the flux of each line profile) or not; if False, then the return is the best-fitting parameters
