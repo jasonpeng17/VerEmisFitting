@@ -1,6 +1,76 @@
 import numpy as np
 from scipy.stats import f
 from astropy import constants as const
+from astropy.stats import sigma_clip, sigma_clipped_stats
+
+def region_around_line(w, flux, cont, order = 1):
+    '''
+    Fit the local continuum level with a n-order polynomial around the chosen line profile within the selected local continuum regions.
+    '''
+    #index is true in the region where we fit the polynomial
+    indcont = ((w >= cont[0][0]) & (w <= cont[0][1])) |((w >= cont[1][0]) & (w <= cont[1][1]))
+    #index of the region we want to return
+    indrange = (w >= cont[0][0]) & (w <= cont[1][1])
+    # make a flux array of shape
+    # (number of spectra, number of points in indrange)
+    f = np.zeros(indrange.sum())
+
+    # use sigma-clip to get rid of sharp features (outliers)
+    filtered_flux = sigma_clip(flux[indcont], sigma=3, maxiters=None, cenfunc='median', masked=True, copy=False)
+    filtered_wave = np.ma.compressed(np.ma.masked_array(w[indcont], filtered_flux.mask))
+    filtered_flux_data = filtered_flux.compressed()
+    # fit polynomial of second order to the continuum region
+    linecoeff, covar = np.polyfit(filtered_wave, filtered_flux_data, order, full = False, cov = True)
+    flux_cont = np.polyval(linecoeff, w[indrange])
+
+    # estimate the error of flux_cont
+    # calculate the residual between the continuum and the polynomial, and then calculate the standard deviation of the residual
+    flux_cont_out = np.polyval(linecoeff, filtered_wave)
+    cont_resid = filtered_flux_data - flux_cont_out
+    flux_cont_err = np.abs(np.nanstd(cont_resid)) * np.ones(len(flux_cont))
+
+    # divide the flux by the polynomial and put the result in our
+    # new flux array
+    f[:] = flux[indrange]/np.polyval(linecoeff, w[indrange])
+    return w[indrange], f, flux_cont, flux_cont_err, linecoeff, covar
+
+def extract_key_parts_from_ratio(ratio):
+    """Helper function to extract the amplitude names from the dictionary that contains the fixed amplitude ratios"""
+    parts = ratio.split('_over_')
+    
+    # Extract parts from the provided ratio string, preserving any suffixes.
+    first_part = parts[0].split('_')[1:]
+    second_part = parts[1].split('_')[0:]
+
+    return ['_'.join(first_part), '_'.join(second_part)]
+
+def num_fix_amps(line_name, amps_fixed_names):
+    """Helper function to determine the number of fixed amplitude parameters for a specific line."""
+    if '&' in line_name: # multiplet that should be fitted together
+        multilet_lines = split_multilet_line(line_name)
+        multilet_lines_no_ion = [line.split(' ')[1] for line in multilet_lines] # get rid of the ion name prefix
+        n_fix = sum([line in fixed_name for line in multilet_lines_no_ion for fixed_name in amps_fixed_names])
+    else: # singlet 
+        single_line_no_ion = line_name.split(' ')[1] # get rid of the ion name prefix
+        n_fix = sum([single_line_no_ion in fixed_name for fixed_name in amps_fixed_names])
+    return n_fix
+
+def num_fix_vels(line_name, fitting_method, vel_fixed_num, broad_wings_lines, triple_gauss_lines, absorption_lines):
+    """Helper function to determine the number of fixed velocity parameters for a specific line."""
+    n_fix = 0
+    fix_num = vel_fixed_num[fitting_method]
+    
+    if '&' in line_name:  # Handling multiplet lines
+        multilet_lines = split_multilet_line(line_name)
+        # Check if any of the lines in the multiplet satisfies the conditions
+        n_fix += fix_num if any(line in absorption_lines for line in multilet_lines) else 0
+        n_fix += fix_num if any(line in broad_wings_lines for line in multilet_lines) else 0
+        n_fix += fix_num if any(line in triple_gauss_lines for line in multilet_lines) else 0
+    else:  # Handling single lines
+        n_fix += fix_num if line_name in absorption_lines else 0
+        n_fix += fix_num if line_name in broad_wings_lines else 0
+        n_fix += fix_num if line_name in triple_gauss_lines else 0
+    return n_fix
 
 def lorentz_integral_analy(a, sigma):
     '''

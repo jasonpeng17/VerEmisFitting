@@ -50,50 +50,49 @@ def gaussian_lorentzian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp
 
     # double component 
     if 2 in (num_comp_first, num_comp_second) and 3 not in (num_comp_first, num_comp_second):
-        x0_1, sigma_1, a_1 = params[4:7]
-        if num_comp_first == 2 and num_comp_second == 1:
-            model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
-            model += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
-
-        if num_comp_second == 2 and num_comp_first == 1:
-            model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
-            model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
-        
-        if (num_comp_first == 2) and (num_comp_second == 2):
-            a_2 = params[7]
+        if 1 in (num_comp_first, num_comp_second):
+            x0_1, sigma_1, a_1 = params[4:7]
+            if num_comp_second == 1:
+                model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1) 
+                model += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
+            else:
+                model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
+                model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
+        else:
+            x0_1, sigma_1, a_1, a_2 = params[4:8]
             model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1) 
             model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
             model += lorentzian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
 
     # triple component
     if 3 in (num_comp_first, num_comp_second):
-        if num_comp_first == 3 and num_comp_second == 1:
+        if num_comp_second == 1:
             x0_1, sigma_1, a_1 = params[4:7]
             x0_2, sigma_2, a_2 = params[7:10]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
 
-        if num_comp_second == 3 and num_comp_first == 1:
+        elif num_comp_first == 1:
             x0_1, sigma_1, a_1 = params[4:7]
             x0_2, sigma_2, a_2 = params[7:10]
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
             model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
 
-        if (num_comp_first == 3) and (num_comp_second == 2):
+        elif num_comp_second == 2:
             x0_1, sigma_1, a_1, a_2 = params[4:8]
             x0_2, sigma_2, a_3 = params[8:11]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_3)
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_3) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
 
-        if (num_comp_first == 2) and (num_comp_second == 3):
+        elif num_comp_first == 2:
             x0_1, sigma_1, a_1, a_2 = params[4:8]
             x0_2, sigma_2, a_3 = params[8:11]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
 
-        if (num_comp_first == 3) and (num_comp_second == 3):
+        else:
             x0_1, sigma_1, a_1, a_2 = params[4:8]
             x0_2, sigma_2, a_3, a_4 = params[8:12]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_3)
@@ -124,50 +123,49 @@ def gaussian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp_second = 1
 
     # double component 
     if 2 in (num_comp_first, num_comp_second) and 3 not in (num_comp_first, num_comp_second):
-        x0_1, sigma_1, a_1 = params[4:7]
-        if num_comp_first == 2 and num_comp_second == 1:
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-
-        if num_comp_second == 2 and num_comp_first == 1:
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
-        
-        if (num_comp_first == 2) and (num_comp_second == 2):
-            a_2 = params[7]
+        if 1 in (num_comp_first, num_comp_second):
+            x0_1, sigma_1, a_1 = params[4:7]
+            if num_comp_second == 1:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+            else:
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+        else:
+            x0_1, sigma_1, a_1, a_2 = params[4:8]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
 
     # triple component
     if 3 in (num_comp_first, num_comp_second):
-        if num_comp_first == 3 and num_comp_second == 1:
+        if num_comp_second == 1:
             x0_1, sigma_1, a_1 = params[4:7]
             x0_2, sigma_2, a_2 = params[7:10]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
 
-        if num_comp_second == 3 and num_comp_first == 1:
+        elif num_comp_first == 1:
             x0_1, sigma_1, a_1 = params[4:7]
             x0_2, sigma_2, a_2 = params[7:10]
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
             model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
 
-        if (num_comp_first == 3) and (num_comp_second == 2):
+        elif num_comp_second == 2:
             x0_1, sigma_1, a_1, a_2 = params[4:8]
             x0_2, sigma_2, a_3 = params[8:11]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_3)
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_3) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
 
-        if (num_comp_first == 2) and (num_comp_second == 3):
+        elif num_comp_first == 2:
             x0_1, sigma_1, a_1, a_2 = params[4:8]
             x0_2, sigma_2, a_3 = params[8:11]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
 
-        if (num_comp_first == 3) and (num_comp_second == 3):
+        else:
             x0_1, sigma_1, a_1, a_2 = params[4:8]
             x0_2, sigma_2, a_3, a_4 = params[8:12]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_3)
@@ -243,41 +241,42 @@ def gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_
     model_line2 = gaussian_1p_v(x2, x0, sigma, a2)
     model_line3 = gaussian_1p_v(x3, x0, sigma, a3)
     model = model_line1 + model_line2 + model_line3
+    # total number of component
+    tot_num_comp = int(num_comp_first + num_comp_second + num_comp_third)
 
     # double component
     if 2 in (num_comp_first, num_comp_second, num_comp_third) and 3 not in (num_comp_first, num_comp_second, num_comp_third):
-        x0_1, sigma_1, a_1 = params[5:8]
-        if num_comp_first == 2 and num_comp_second == 1 and num_comp_third == 1:
-            model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
-            model += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
+        if tot_num_comp == 4:
+            x0_1, sigma_1, a_1 = params[5:8]
+            if num_comp_first == 2:
+                model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
+                model += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
 
-        if num_comp_first == 1 and num_comp_second == 2 and num_comp_third == 1:
-            model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
-            model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
+            elif num_comp_second == 2:
+                model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
+                model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
 
-        if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 2:
-            model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_1)
-            model += lorentzian_1p_v(x3, x0_1, sigma_1, a_1)
+            elif num_comp_third == 2:
+                model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_1)
+                model += lorentzian_1p_v(x3, x0_1, sigma_1, a_1)
 
-        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 1:
+        elif tot_num_comp == 5:
             a_2 = params[8]
-            model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1) 
-            model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
-            model += lorentzian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
+            if num_comp_first == 2 and num_comp_second == 2:
+                model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1) 
+                model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
+                model += lorentzian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
 
-        if num_comp_first == 1 and num_comp_second == 2 and num_comp_third == 2:
-            a_2 = params[8]
-            model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
-            model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
-            model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
+            elif num_comp_second == 2 and num_comp_third == 2:
+                model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
+                model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
+                model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
 
-        if num_comp_first == 2 and num_comp_second == 1 and num_comp_third == 2:
-            a_2 = params[8]
-            model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
-            model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
-            model += lorentzian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
-        
-        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 2:
+            elif num_comp_first == 2 and num_comp_third == 2:
+                model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
+                model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
+                model += lorentzian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
+        else:
             a_2, a_3 = params[8:10]
             model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
             model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
@@ -286,66 +285,69 @@ def gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_
 
     # triple component    
     if 3 in (num_comp_first, num_comp_second, num_comp_third):
-        if num_comp_first == 3 and num_comp_second == 1 and num_comp_third == 1:
+        if tot_num_comp == 5:
             x0_1, sigma_1, a_1 = params[5:8]
             x0_2, sigma_2, a_2 = params[8:11]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
+            if num_comp_first == 3:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
 
-        if num_comp_first == 1 and num_comp_second == 3 and num_comp_third == 1:
-            x0_1, sigma_1, a_1 = params[5:8]
-            x0_2, sigma_2, a_2 = params[8:11]
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
+            elif num_comp_second == 3:
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
 
-        if num_comp_first == 1 and num_comp_second == 3 and num_comp_third == 2:
+            elif num_comp_third == 3:
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_2, sigma_2, a_2)
+                model += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_2, sigma_2, a_2)
+
+        elif tot_num_comp == 6:
             x0_1, sigma_1, a_1, a_2 = params[5:9]
             x0_2, sigma_2, a_3 = params[9:12]
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
+            if num_comp_second == 3 and num_comp_third == 2:
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
 
-        if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 1:
-            x0_1, sigma_1, a_1, a_2 = params[5:9]
-            x0_2, sigma_2, a_3 = params[9:12]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
+            elif num_comp_second == 2 and num_comp_third == 3:
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x3, x0_2, sigma_2, a_3)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x3, x0_2, sigma_2, a_3)
 
-        if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 3:
-            x0_1, sigma_1, a_1 = params[5:8]
-            x0_2, sigma_2, a_2 = params[8:11]
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_2, sigma_2, a_2)
-            model += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_2, sigma_2, a_2)
+            elif num_comp_first == 2 and num_comp_second == 3:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
 
-        if num_comp_first == 3 and num_comp_second == 2 and num_comp_third == 2:
+            elif num_comp_first == 2 and num_comp_third == 3:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x3, x0_2, sigma_2, a_3)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x3, x0_2, sigma_2, a_3)
+
+        elif tot_num_comp == 7:
             x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
             x0_2, sigma_2, a_4 = params[10:13]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            if num_comp_second == 2 and num_comp_third == 2:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
 
-        if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 2:
-            x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
-            x0_2, sigma_2, a_4 = params[10:13]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_4)
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_4)
+            elif num_comp_first == 2 and num_comp_third == 2:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_4)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_4)
 
-        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 3:
-            x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
-            x0_2, sigma_2, a_4 = params[10:13]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + lorentzian_1p_v(x3, x0_2, sigma_2, a_4)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-            model += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + lorentzian_1p_v(x3, x0_2, sigma_2, a_4)
+            elif num_comp_first == 2 and num_comp_second == 2:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + lorentzian_1p_v(x3, x0_2, sigma_2, a_4)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+                model += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + lorentzian_1p_v(x3, x0_2, sigma_2, a_4)
         
-        if num_comp_first == 3 and num_comp_second == 3 and num_comp_third == 3:
+        elif tot_num_comp == 9:
             x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
             x0_2, sigma_2, a_4, a_5, a_6 = params[10:15]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
@@ -377,41 +379,42 @@ def gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second
     model_line2 = gaussian_1p_v(x2, x0, sigma, a2)
     model_line3 = gaussian_1p_v(x3, x0, sigma, a3)
     model = model_line1 + model_line2 + model_line3
+    # total number of component
+    tot_num_comp = int(num_comp_first + num_comp_second + num_comp_third)
 
     # double component
     if 2 in (num_comp_first, num_comp_second, num_comp_third) and 3 not in (num_comp_first, num_comp_second, num_comp_third):
-        x0_1, sigma_1, a_1 = params[5:8]
-        if num_comp_first == 2 and num_comp_second == 1 and num_comp_third == 1:
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+        if tot_num_comp == 4:
+            x0_1, sigma_1, a_1 = params[5:8]
+            if num_comp_first == 2:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1)
 
-        if num_comp_first == 1 and num_comp_second == 2 and num_comp_third == 1:
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+            elif num_comp_second == 2:
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
 
-        if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 2:
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1)
-            model += gaussian_1p_v(x3, x0_1, sigma_1, a_1)
+            elif num_comp_third == 2:
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1)
+                model += gaussian_1p_v(x3, x0_1, sigma_1, a_1)
 
-        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 1:
+        elif tot_num_comp == 5:
             a_2 = params[8]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+            if num_comp_first == 2 and num_comp_second == 2:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
 
-        if num_comp_first == 1 and num_comp_second == 2 and num_comp_third == 2:
-            a_2 = params[8]
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+            elif num_comp_second == 2 and num_comp_third == 2:
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2)
 
-        if num_comp_first == 2 and num_comp_second == 1 and num_comp_third == 2:
-            a_2 = params[8]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-        
-        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 2:
+            elif num_comp_first == 2 and num_comp_third == 2:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+        else:
             a_2, a_3 = params[8:10]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
@@ -420,66 +423,69 @@ def gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second
 
     # triple component    
     if 3 in (num_comp_first, num_comp_second, num_comp_third):
-        if num_comp_first == 3 and num_comp_second == 1 and num_comp_third == 1:
+        if tot_num_comp == 5:
             x0_1, sigma_1, a_1 = params[5:8]
             x0_2, sigma_2, a_2 = params[8:11]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
+            if num_comp_first == 3:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
 
-        if num_comp_first == 1 and num_comp_second == 3 and num_comp_third == 1:
-            x0_1, sigma_1, a_1 = params[5:8]
-            x0_2, sigma_2, a_2 = params[8:11]
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
+            elif num_comp_second == 3:
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
 
-        if num_comp_first == 1 and num_comp_second == 3 and num_comp_third == 2:
+            elif num_comp_third == 3:
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_2, sigma_2, a_2)
+                model += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_2, sigma_2, a_2)
+
+        elif tot_num_comp == 6:
             x0_1, sigma_1, a_1, a_2 = params[5:9]
             x0_2, sigma_2, a_3 = params[9:12]
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
+            if num_comp_second == 3 and num_comp_third == 2:
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
 
-        if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 1:
-            x0_1, sigma_1, a_1, a_2 = params[5:9]
-            x0_2, sigma_2, a_3 = params[9:12]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
+            elif num_comp_second == 2 and num_comp_third == 3:
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_2, sigma_2, a_3)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_2, sigma_2, a_3)
 
-        if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 3:
-            x0_1, sigma_1, a_1 = params[5:8]
-            x0_2, sigma_2, a_2 = params[8:11]
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_2, sigma_2, a_2)
-            model += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_2, sigma_2, a_2)
+            elif num_comp_first == 2 and num_comp_second == 3:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
 
-        if num_comp_first == 3 and num_comp_second == 2 and num_comp_third == 2:
+            elif num_comp_first == 2 and num_comp_third == 3:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_2, sigma_2, a_3)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_2, sigma_2, a_3)
+
+        elif tot_num_comp == 7:
             x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
             x0_2, sigma_2, a_4 = params[10:13]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            if num_comp_second == 2 and num_comp_third == 2:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
 
-        if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 2:
-            x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
-            x0_2, sigma_2, a_4 = params[10:13]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_4)
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-            model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_4)
+            elif num_comp_first == 2 and num_comp_third == 2:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_4)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+                model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_4)
 
-        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 3:
-            x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
-            x0_2, sigma_2, a_4 = params[10:13]
-            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + gaussian_1p_v(x3, x0_2, sigma_2, a_4)
-            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-            model += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + gaussian_1p_v(x3, x0_2, sigma_2, a_4)
+            elif num_comp_first == 2 and num_comp_second == 2:
+                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + gaussian_1p_v(x3, x0_2, sigma_2, a_4)
+                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+                model += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + gaussian_1p_v(x3, x0_2, sigma_2, a_4)
         
-        if num_comp_first == 3 and num_comp_second == 3 and num_comp_third == 3:
+        elif tot_num_comp == 9:
             x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
             x0_2, sigma_2, a_4, a_5, a_6 = params[10:15]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)

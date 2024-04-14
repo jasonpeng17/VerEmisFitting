@@ -87,7 +87,7 @@ class FittingWindow:
     def find_local_cont_file(self, line_name):
         # Look for local continum region file
         # first in local directory
-        cont_file_path = os.path.join(os.getcwd(), f'cont_dir/{self.folder_name}')
+        cont_file_path = os.path.join(os.path.dirname(__file__), f'cont_dir/{self.folder_name}')
         if not os.path.exists(cont_file_path):
             os.makedirs(cont_file_path)
         self.local_contfile = os.path.join(cont_file_path, f"{line_name.split(' ')[0]}_{line_name.split(' ')[1]}.cont") # assume the local cont file is in the local folder cont_dir
@@ -140,7 +140,7 @@ class FittingWindow:
     def find_local_lmsk_file(self, line_name):
         # Look for mask data file
         # first in local directory
-        lmsk_file_path = os.path.join(os.getcwd(), f'lmsk_dir/{self.folder_name}')
+        lmsk_file_path = os.path.join(os.path.dirname(__file__), f'lmsk_dir/{self.folder_name}')
         if not os.path.exists(lmsk_file_path):
             os.makedirs(lmsk_file_path)
         self.local_lmfile = os.path.join(lmsk_file_path, f"{line_name.split(' ')[0]}_{line_name.split(' ')[1]}.lmsk") # assume the lmsk file is in the local folder lmsk_dir
@@ -204,7 +204,7 @@ class FittingWindow:
     def save_lmsk_list(self, lmasks, lmhdr):
         # Write out a local copy of line masks so user can edit
         if len(lmasks) > 0:
-            # lmsk_file_path = os.path.join(os.getcwd(), f'lmsk_dir')
+            # lmsk_file_path = os.path.join(os.path.dirname(__file__), f'lmsk_dir')
             # if not os.path.exists(lmsk_file_path):
             #     os.makedirs(lmsk_file_path)
             # local_lmfile = os.path.join(lmsk_file_path, f'{self.folder_name}.lmsk')
@@ -355,34 +355,4 @@ class FittingWindow:
         # Stop the server
         self.stop_bokeh_server()
         return boundary, lmasks
-
-# TESTING:
-if __name__ == "__main__":
-    from astropy.io import fits
-    import numpy as np
-    # define the absolute path of the current working directory
-    current_direc = os.getcwd() 
-
-    # define the absolute path of the input fits files
-    data_fits = current_direc + '/example_inputs/j1044+0353_addALL_icubes_wn.fits'
-    err_fits = current_direc + '/example_inputs/j1044+0353_addALL_icubes_wn_err.fits'
-    spec = fits.open(data_fits)[0].data # flux array
-    err = fits.open(err_fits)[0].data # error array
-    wave = np.load(current_direc + '/example_inputs/wave_grid.npy') # wavelength array
-    redshift = 0.01287
-
-    # initialize the class
-    Fitting_Window = FittingWindow(wave, spec, folder_name = 'j1044+0353_addALL_icubes_wn')
-
-    x0 = 5007 * (1. + redshift)  # Example central wavelength (e.g., H-alpha line)
-    x1, x2 = 4970 * (1. + redshift), 5050 * (1. + redshift)  # Initial guesses for the fitting window
-    x3, x4 = 4990 * (1. + redshift), 5030 * (1. + redshift)  # Initial guesses for the continuum regions
-
-    boundary, lmasks = Fitting_Window.run_process(x0, x1, x2, x3, x4, mask_lines = True)
-    print(boundary)
-    print(lmasks)
-
-
-
-
 

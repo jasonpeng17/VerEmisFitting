@@ -3,6 +3,7 @@ from astropy.io import fits
 import os, sys
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import rc
 import pandas as pd
 from scipy import stats
 from scipy.stats import skew
@@ -33,7 +34,7 @@ from IPython import embed
 
 class line_fitting_exec():
     def __init__(self, redshift = None, vac_or_air = 'air', seed = 42, folder_name = None, file_name = None, line_select_method = 'gui', input_txt = None, 
-                 fit_cont_order = 1, fit_window_gui = False, params_windows_gui = True):
+                 fit_cont_order = 1, fit_window_gui = False, params_windows_gui = True, sigma_min = 30, sigma_max_e = 1200, sigma_max_a = 1500, fit_algorithm = 'leastsq'):
         """
         Constructor for the line_fitting_exec class that initializes the following class variables:
         
@@ -49,6 +50,14 @@ class line_fitting_exec():
             Whether to interactively determine the fitting window, local continuum regions, and masking lines. Default is False.
         params_windows_gui : bool
             Whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is True (i.e., pop up the window).
+        sigma_min : float
+            The minimum velocity width (i.e., instrumental seeing) for each velocity component. Default is 30 km / s.
+        sigma_max_e : float
+            The maximum velocity width for each velocity component (for emissions). Default is 1200 km / s.
+        sigma_max_a : float
+            The maximum velocity width for each velocity component (for absorptions). Default is 1500 km / s.
+        fit_algorithm : str
+            The algorithm used for fitting (the well-tested ones include ’leastsq’: Levenberg-Marquardt (default), ’nelder’: Nelder-Mead, and ’powell’: Powell)
         """
         self.c = const.c.to('km/s').value
         # save the seed value and apply to the line_fitting_model function such that it has the same randomness
@@ -61,6 +70,8 @@ class line_fitting_exec():
         self.fit_cont_order = fit_cont_order
         self.fit_window_gui = fit_window_gui
         self.params_windows_gui = params_windows_gui
+        self.sigma_limits = [sigma_min, sigma_max_e, sigma_max_a]
+        self.fit_algorithm = fit_algorithm
         # Create a ttkbootstrap Style
         # self.style = ttk.Style(theme='cosmo')  # You can choose other themes as well
 
@@ -119,6 +130,13 @@ class line_fitting_exec():
             else:
                 self.initial_guess_dict, self.param_range_dict, _ = fit_window.run()
 
+        # number of fixed velocity parameters for each self.fitting_method (times num of velocity components for each line profile)
+        self.vel_fixed_num = {'Free fitting': 0, 'Fix velocity centroid': 1, 'Fix velocity width': 1, 'Fix velocity centroid and width': 2}
+
+        # return the fixed line component names included in self.amps_ratio_dict 
+        # since each key name in self.amps_ratio_dict is in the format of A_over_B, the fixed parameter for each key name is A here (for this example).
+        self.amps_fixed_names = [part for ratio, value in self.amps_ratio_dict.items() for part in extract_key_parts_from_ratio(ratio)][::2] # [::2]/[1::2] to get the even/odd index; 
+
         # get the folder name from user input
         if folder_name != None:
             self.folder_name = folder_name 
@@ -135,37 +153,6 @@ class line_fitting_exec():
 
         # initialize the line mask dict for all masked lines
         self.lmsks_dict = dict()
-    
-    def region_around_line(self, w, flux, cont, order = 1):
-        '''
-        Fit the local continuum level with a n-order polynomial around the chosen line profile within the selected local continuum regions.
-        '''
-        #index is true in the region where we fit the polynomial
-        indcont = ((w >= cont[0][0]) & (w <= cont[0][1])) |((w >= cont[1][0]) & (w <= cont[1][1]))
-        #index of the region we want to return
-        indrange = (w >= cont[0][0]) & (w <= cont[1][1])
-        # make a flux array of shape
-        # (number of spectra, number of points in indrange)
-        f = np.zeros(indrange.sum())
-
-        # use sigma-clip to get rid of sharp features (outliers)
-        filtered_flux = sigma_clip(flux[indcont], sigma=3, maxiters=None, cenfunc='median', masked=True, copy=False)
-        filtered_wave = np.ma.compressed(np.ma.masked_array(w[indcont], filtered_flux.mask))
-        filtered_flux_data = filtered_flux.compressed()
-        # fit polynomial of second order to the continuum region
-        linecoeff, covar = np.polyfit(filtered_wave, filtered_flux_data, order, full = False, cov = True)
-        flux_cont = np.polyval(linecoeff, w[indrange])
-
-        # estimate the error of flux_cont
-        # calculate the residual between the continuum and the polynomial, and then calculate the standard deviation of the residual
-        flux_cont_out = np.polyval(linecoeff, filtered_wave)
-        cont_resid = filtered_flux_data - flux_cont_out
-        flux_cont_err = np.abs(np.nanstd(cont_resid)) * np.ones(len(flux_cont))
-
-        # divide the flux by the polynomial and put the result in our
-        # new flux array
-        f[:] = flux[indrange]/np.polyval(linecoeff, w[indrange])
-        return w[indrange], f, flux_cont, flux_cont_err, linecoeff, covar
 
     def extract_fit_window(self, wave, spec, espec, selected_line, indx):
         '''
@@ -241,7 +228,7 @@ class line_fitting_exec():
                 wave_fit = wave_fit.compressed()
         
         # fit the local continuum level and extract it from the flux array
-        cont_f_fit, cont_f_fit_err, linecoeff, covar = self.region_around_line(wave_fit, flux_fit, cont_fit, order = self.fit_cont_order)[-4:]
+        cont_f_fit, cont_f_fit_err, linecoeff, covar = region_around_line(wave_fit, flux_fit, cont_fit, order = self.fit_cont_order)[-4:]
         self.cont_line_dict[selected_line] = np.array([cont_f_fit, cont_f_fit_err])
         # local-continuum-subtracted spectrum
         flux_sc_fit = flux_fit - cont_f_fit
@@ -404,7 +391,8 @@ class line_fitting_exec():
             param_range_dict[line] = flux_line_max * np.array([self.param_range_dict[key] for key in case_amp_keys])
 
         input_arr = (self.velocity_dict, self.flux_v_dict, self.err_v_dict, initial_guess_dict, param_range_dict, self.amps_ratio_dict, self.absorption_lines, 
-                     self.broad_wings_lines, self.double_gauss_lines, self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, self.fitting_method, self.fit_func_choices)
+                     self.broad_wings_lines, self.double_gauss_lines, self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, self.fitting_method, 
+                     self.fit_func_choices, self.sigma_limits, self.fit_algorithm)
         self.line_fit_model = line_fitting_model(seed = self.seed)
         best_model, best_chi2 = self.line_fit_model.fitting_all_lines(input_arr, n_iteration = n_iteration)
         return best_model, best_chi2
@@ -496,8 +484,14 @@ class line_fitting_exec():
                 # single emission component
                 if all((l not in self.broad_wings_lines) for l in multilet_lines):
                     params_line = [self.x0_e, self.sigma_e] + amps
-                    self.residual_dict[line] = residual_2p_v_c_doublet(params_line, self.velocity_dict[line][0], self.velocity_dict[line][1], 
-                                                                       self.flux_v_dict[line], self.err_v_dict[line])
+                    # doublet
+                    if len(multilet_lines) == 2:
+                        self.residual_dict[line] = residual_2p_v_c_doublet(params_line, self.velocity_dict[line][0], self.velocity_dict[line][1], 
+                                                                           self.flux_v_dict[line], self.err_v_dict[line])
+                    # triplet
+                    elif len(multilet_lines) == 3:
+                        self.residual_dict[line] = residual_3p_v_c_triplet(params_line, self.velocity_dict[line][0], self.velocity_dict[line][1], self.velocity_dict[line][2],
+                                                                           self.flux_v_dict[line], self.err_v_dict[line])
                 # multi emission component
                 else:
                     for num_ii, l in enumerate(multilet_lines):
@@ -681,7 +675,10 @@ class line_fitting_exec():
                     self.best_model_ab_dict[line] = lorentzian_1p_v(self.velocity_dict[line], self.x0_a, self.sigma_a, abs_amp[0])
             # append the line chi2 to the chi2 dict
             ndata = len(self.residual_dict[line]) # number of data points
-            nvarys = len(params_line) # number of variables in fit
+            nfixs_amp = num_fix_amps(line, self.amps_fixed_names) # number of fixed amplitude variables in fit
+            nfixs_vel = num_fix_vels(line, self.fitting_method, self.vel_fixed_num, self.broad_wings_lines, 
+                                     self.triple_gauss_lines, self.absorption_lines) # number of fixed velocity variables in fit
+            nvarys = len(params_line) - nfixs_amp - nfixs_vel # number of variables in fit
             dof = ndata - nvarys # degree of freedom
             chisqr = np.sum(self.residual_dict[line]**2)
             self.redchi2_dict[line] = chisqr / dof
@@ -1205,6 +1202,7 @@ class line_fitting_exec():
         num_plots = len(self.selected_lines)
         
         ## Plot Styling
+        rc('text', usetex = True)
         plt.rcParams['font.family'] = "serif"
         matplotlib.rcParams['xtick.direction'] = 'in'
         matplotlib.rcParams['ytick.direction'] = 'in'
@@ -1311,9 +1309,8 @@ class line_fitting_exec():
                 line_name = line
             # upper panel for plotting the raw and best-fitting line profile
             axes[0,i].step(v_c_arr, self.flux_plus_cont_v_dict[line]/np.max(self.flux_plus_cont_v_dict[line]), 'k', where = 'mid')
-            axes[0,i].fill_between(v_c_arr, (self.flux_plus_cont_v_dict[line]+self.err_v_c_dict[line]) / np.max(self.flux_plus_cont_v_dict[line]),
-                                  (self.flux_plus_cont_v_dict[line]-self.err_v_c_dict[line]) / np.max(self.flux_plus_cont_v_dict[line]), alpha =0.5, zorder = 1,
-                                   facecolor = 'black')
+            axes[0,i].fill_between(v_c_arr, (self.flux_plus_cont_v_dict[line]-self.err_v_c_dict[line]) / np.max(self.flux_plus_cont_v_dict[line]),
+                                  (self.flux_plus_cont_v_dict[line]+self.err_v_c_dict[line]) / np.max(self.flux_plus_cont_v_dict[line]), alpha =0.5, zorder = 1, facecolor = 'black')
             axes[0,i].plot(v_arr, self.model_plus_cont_v_dict[line] / np.max(self.flux_plus_cont_v_dict[line]), 'r--', zorder = 2, lw = 2)
             if line in self.broad_wings_lines:
                 axes[0,i].plot(v_arr, self.best_model_plus_cont_n_v_dict[line] / np.max(self.flux_plus_cont_v_dict[line]), 'c--',
@@ -1329,7 +1326,7 @@ class line_fitting_exec():
                 axes[0,i].plot(v_arr, self.best_model_plus_cont_ab_v_dict[line] / np.max(self.flux_plus_cont_v_dict[line]), 'b--',
                                zorder = 2, lw = 2)
             axes[0,i].set_yscale('log')
-            axes[0,i].text(0.04, 0.92, line_name + '\n' + r'$\chi^2 = $' + "{0:.2f}".format(self.redchi2_dict[line]), 
+            axes[0,i].text(0.04, 0.92, line_name.replace('&', ' \& ') + '\n' + r'$\chi^2 = $' + "{0:.2f}".format(self.redchi2_dict[line]), 
                            size = 14, transform=axes[0,i].transAxes, va="center",color="black")
             # axes[0,i].axvline(x = 0, ls = '--', color = 'grey', lw = 2) # might be confusing for multiplet
             axes[0,i].tick_params(axis='y', which='minor')
@@ -1341,11 +1338,11 @@ class line_fitting_exec():
             axes[0,i].set_ylim(ymin, ymax)
             # axes[0,i].legend(loc='upper left', fontsize = 13, framealpha = 0)
             # lower panel for plotting the residual
-            axes[1,i].step(v_arr, self.residual_dict[line], where = 'mid')
-            [axes[1,i].axhline(y=j, color="red", linestyle='--') for j in [0,-1,1]]
-            axes[1,i].set_xlabel(r'Velocity $\mathrm{(km \ s^{-1})}$',size = 22)
+            axes[1,i].step(v_arr, self.residual_dict[line], 'k', where = 'mid')
+            # [axes[1,i].axhline(y=j, color="red", linestyle='--') for j in [0,-1, 1]]
+            axes[1,i].set_xlabel(r'Velocity $\rm{(km \ s^{-1})}$',size = 22)
             if i == 0:
-                axes[1,i].set_ylabel(r'Residual',size = 22)
+                axes[1,i].set_ylabel(r'Residual', size = 22)
             ymin2 = 1.05 * min(self.residual_dict[line])
             ymax2 = 1.05 * max(self.residual_dict[line])
             axes[1,i].set_ylim(ymin2, ymax2)

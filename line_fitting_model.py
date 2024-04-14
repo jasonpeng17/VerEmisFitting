@@ -18,7 +18,7 @@ from termcolor import colored
 
 from line_fitting_exec import *
 from modeling_utils import *
-from analysis_utils import split_multilet_line
+from analysis_utils import split_multilet_line, extract_key_parts_from_ratio
 from IPython import embed
 
 class line_fitting_model():
@@ -42,16 +42,6 @@ class line_fitting_model():
                 return [dict_pars[f"{lines.split(' ')[1]}_b{suffix}"]]
             if with_amp_in_key:
                 return [dict_pars[f"amp_{lines.split(' ')[1]}_b{suffix}"]]
-
-    def extract_key_parts_from_ratio(self, ratio):
-        """Helper function to extract the amplitude names from the dictionary that contains the fixed amplitude ratios"""
-        parts = ratio.split('_over_')
-        
-        # Extract parts from the provided ratio string, preserving any suffixes.
-        first_part = parts[0].split('_')[1:]
-        second_part = parts[1].split('_')[0:]
-
-        return ['_'.join(first_part), '_'.join(second_part)]
 
     def residual_v_f_all(self, params, x_dict, y_dict, yerr_dict, absorption_lines, broad_wings_lines, double_gauss_lines, triple_gauss_lines):
         """
@@ -211,7 +201,7 @@ class line_fitting_model():
     def print_best_fit_params(self, x0_e, sigma_e, amps, x0_b=None, sigma_b=None, x0_b2=None, sigma_b2=None, x0_a=None, sigma_a=None, 
                               broad_wing=False, absorption=False, double_gauss=False, triple_gauss=False):
         # Printing velocity centers
-        velocity_centers = colored(f"velocity center (in km/s):", 'black', attrs=['underline']) + f" x0_e = {x0_e:.3f}"
+        velocity_centers = colored(f"velocity center (in km/s):", 'grey', attrs=['underline']) + f" x0_e = {x0_e:.3f}"
         if broad_wing:
             velocity_centers += f", x0_b = {x0_b:.3f}"
             if triple_gauss:
@@ -221,7 +211,7 @@ class line_fitting_model():
         print(velocity_centers)
         
         # Printing velocity widths
-        velocity_widths = colored(f"velocity width (in km/s):", 'black', attrs=['underline']) + f" sigma_e = {sigma_e:.3f}"
+        velocity_widths = colored(f"velocity width (in km/s):", 'grey', attrs=['underline']) + f" sigma_e = {sigma_e:.3f}"
         if broad_wing:
             velocity_widths += f", sigma_b = {sigma_b:.3f}"
             if triple_gauss:
@@ -231,7 +221,7 @@ class line_fitting_model():
         print(velocity_widths)
         
         # Printing line amplitudes
-        print(colored(r"line amplitude (in Flam units):", 'black', attrs=['underline']))
+        print(colored(r"line amplitude (in Flam units):", 'grey', attrs=['underline']))
         for line in self.emission_lines:
             self.print_line_amplitude(line, amps, broad_wing, absorption, double_gauss, triple_gauss)
 
@@ -323,7 +313,7 @@ class line_fitting_model():
         # print the best chi2 and best parameter values of the current iteration (which satisfies the conditions above)
         print(colored(f"\nIteration #{self.current_iteration}: ", 'green', attrs=['bold', 'underline']))
         print(colored("The current best chi2 value is ", 'green'))
-        print("{0:.5f}".format(self.best_chi2))
+        print(colored("{0:.5f}".format(self.best_chi2), 'grey'))
         print(colored("The current best parameter values are ", 'green'))
         self.print_best_fit_params(x0_e, sigma_e, amps, x0_b=x0_b, sigma_b=sigma_b, x0_b2=x0_b2, sigma_b2=sigma_b2, x0_a=x0_a, sigma_a=sigma_a, 
                                    broad_wing=broad_wing, absorption=absorption, double_gauss=double_gauss, triple_gauss=triple_gauss)
@@ -407,7 +397,7 @@ class line_fitting_model():
         Parameters
         ----------
         input_arr : list
-            A list containing velocity_arr, flux_v_arr, err_v_arr, initial_guess, and param_range.
+            A list containing, e.g., velocity_arr, flux_v_arr, err_v_arr, initial_guess, and param_range.
         n_iteration : int, optional
             Number of iterations for fitting, default is 1000.
         Returns
@@ -417,7 +407,7 @@ class line_fitting_model():
         """
         # fit all intended emission lines in the velocity space
         velocity_dict, flux_v_dict, err_v_dict, initial_guess_dict, param_range_dict, amps_ratio_dict, self.absorption_lines, self.broad_wings_lines, \
-        self.double_gauss_lines, self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, fitting_method, self.fit_func_choices = input_arr
+        self.double_gauss_lines, self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, fitting_method, self.fit_func_choices, self.sigma_limits, self.fit_algorithm = input_arr
 
         # get a copy of the initial guess dict
         initial_guess_dict_old = initial_guess_dict.copy()
@@ -426,7 +416,7 @@ class line_fitting_model():
         self.emission_lines = list(velocity_dict.keys())
 
         # define the lists that contains the fixed amplitude pairs and their fixed amp ratios
-        self.amps_fixed_list = [part for ratio, value in amps_ratio_dict.items() for part in self.extract_key_parts_from_ratio(ratio)]
+        self.amps_fixed_list = [part for ratio, value in amps_ratio_dict.items() for part in extract_key_parts_from_ratio(ratio)]
         self.amps_ratio_list = [value for ratio, value in amps_ratio_dict.items()]
 
         # determine whether to fix the velocity center and width for multi-component fittings
@@ -435,6 +425,9 @@ class line_fitting_model():
         vary_center, vary_width = fitting_methods[fitting_method]
         vary_dict = {'e': (True, True), 'b': (vary_center, vary_width), 'b2': (vary_center, vary_width),  'a': (vary_center, vary_width)}
 
+        # assign the input limits of velocity width of each velocity component
+        sigma_min, sigma_max_e, sigma_max_a = self.sigma_limits
+
         for i in range(n_iteration):
             # define the current iteration number
             self.current_iteration = i + 1
@@ -442,15 +435,15 @@ class line_fitting_model():
             self.params = Parameters()
             # velocity center and width of the narrow emission component
             self.params.add('center_e', value=initial_guess_dict['v_e'][0], vary = True)
-            self.params.add('sigma_e', value=initial_guess_dict['v_e'][1], min = 30, max = 200, vary = True)
+            self.params.add('sigma_e', value=initial_guess_dict['v_e'][1], min = sigma_min, max = sigma_max_e, vary = True)
             for component in ['b', 'b2', 'a']:
                 # define a max sigma value 
-                sigma_max = 1500 if component == 'a' else 1200
+                sigma_max = sigma_max_a if component == 'a' else sigma_max_e
                 # set initial values only for other velocity info
                 if f'v_{component}' in initial_guess_dict:
                     self.params.add(f"center_{component}", value=initial_guess_dict[f'v_{component}'][0],
                                     expr=f"center_e" if not vary_dict[component][0] else None)
-                    self.params.add(f"sigma_{component}", value=initial_guess_dict[f'v_{component}'][1], min=30, max=sigma_max, 
+                    self.params.add(f"sigma_{component}", value=initial_guess_dict[f'v_{component}'][1], min=sigma_min, max=sigma_max, 
                                     expr=f"sigma_e" if not vary_dict[component][1] else None)
 
             # set initial values only for amplitude info (free amplitude fitting)
@@ -502,7 +495,8 @@ class line_fitting_model():
 
             # obtain the best result of this iteration
             self.result = minimize(self.residual_v_f_all, self.params, args=(velocity_dict, flux_v_dict, err_v_dict, self.absorption_lines, self.broad_wings_lines, 
-                                                                             self.double_gauss_lines, self.triple_gauss_lines), method = "leastsq", calc_covar = True)
+                                                                             self.double_gauss_lines, self.triple_gauss_lines), method = self.fit_algorithm, calc_covar = True, 
+                                                                             max_nfev=100000)
             self.param_dict = self.result.params.valuesdict()
             # obtain the best-fitting velocity center and width of each component
             x0_e = self.param_dict["center_e"]
