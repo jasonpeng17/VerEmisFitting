@@ -2,8 +2,8 @@
 import numpy as np
 from astropy.io import fits
 import os, sys
-from line_fitting_exec import *
-from line_fitting_model import *
+from veremisfitting.line_fitting_exec import *
+from veremisfitting.line_fitting_model import *
 
 # define the absolute path of the current working directory
 current_direc = os.getcwd() 
@@ -20,16 +20,16 @@ wave = np.load(current_direc + '/example_inputs/wave_grid.npy') # wavelength arr
 redshift = 0.01287
 # whether the spectrum is in "vac" or "air" wavelength space
 vac_or_air = 'air'
-# the order of fitting local continuum level
+# the polynomial order of fitting local continuum level
 fit_cont_order = 1
 # "line_selection_method = 'gui' or 'txt' defines how you want to select the lines for fitting, whether using a GUI or inputting a txt"
-line_select_method = 'gui'
+line_select_method = 'txt'
 # text file for selecting intended lines for fitting
 input_example_txt = current_direc + '/input_txt/line_selection_example.txt' 
 # whether to interactively determine the fitting window, local continuum regions, and masking lines 
-fit_window_gui = True # if False, use the default values 
+fit_window_gui = False # if False, use the default values 
 # whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is False (i.e., pop up the window)
-params_windows_gui = True # if False, use the default parameter initial values and corresponding ranges for each iteration
+params_windows_gui = False # if False, use the default parameter initial values and corresponding ranges for each iteration
 # define the folder name 
 folder_name = data_fits.split('/')[-1][:-5] # if None, then a tk window will pop up for users to interactively enter the folder name; if users forget to type the folder name in the tk window,
                                             # the default folder name is "test_folder".

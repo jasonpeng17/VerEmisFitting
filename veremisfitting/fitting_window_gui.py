@@ -87,7 +87,7 @@ class FittingWindow:
     def find_local_cont_file(self, line_name):
         # Look for local continum region file
         # first in local directory
-        cont_file_path = os.path.join(os.path.dirname(__file__), f'cont_dir/{self.folder_name}')
+        cont_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'cont_dir/{self.folder_name}')
         if not os.path.exists(cont_file_path):
             os.makedirs(cont_file_path)
         self.local_contfile = os.path.join(cont_file_path, f"{line_name.split(' ')[0]}_{line_name.split(' ')[1]}.cont") # assume the local cont file is in the local folder cont_dir
@@ -140,7 +140,7 @@ class FittingWindow:
     def find_local_lmsk_file(self, line_name):
         # Look for mask data file
         # first in local directory
-        lmsk_file_path = os.path.join(os.path.dirname(__file__), f'lmsk_dir/{self.folder_name}')
+        lmsk_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f'lmsk_dir/{self.folder_name}')
         if not os.path.exists(lmsk_file_path):
             os.makedirs(lmsk_file_path)
         self.local_lmfile = os.path.join(lmsk_file_path, f"{line_name.split(' ')[0]}_{line_name.split(' ')[1]}.lmsk") # assume the lmsk file is in the local folder lmsk_dir

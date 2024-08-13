@@ -54,10 +54,10 @@ wave = np.load(current_direc + '/example_inputs/wave_grid.npy')
 redshift = 0.01287
 # whether the spectrum is in "vac" or "air" wavelength space
 vac_or_air = 'air'
-# the order of fitting local continuum level
+# the polynomial order of fitting local continuum level
 fit_cont_order = 1
 # "line_selection_method = 'gui' or 'txt' defines how you want to select the lines for fitting, whether using a GUI or inputting a txt"
-line_select_method = 'txt'
+line_select_method = 'gui'
 # text file for selecting intended lines for fitting
 input_example_txt = current_direc + '/input_txt/line_selection_example.txt' 
 # whether to interactively determine the fitting window, local continuum regions, and masking lines 
@@ -134,7 +134,17 @@ After adding a particular line to both wavelength files, users should also add t
 
 5. **Refitting with Saved Settings**: For refitting the same selected lines, the saved `.cont` and `.lmsk` files will be loaded to recreate the previously chosen fitting window, local continuum regions, and masked regions. Therefore, you can set `fit_window_gui = False` in the `line_fitting_exec` class. 
 
-6. **(Optional) Potential Application to IFU Data**: Importing the VerEmisFitting package for fitting spectra extracted from IFU data can be time-consuming and redundant, as it requires repeatedly clicking buttons in every pop-up GUI for each spectrum. Therefore, it is recommended to set `line_select_method = 'txt'`, `fit_window_gui = False`, and `params_window_gui = False`. The first two parameters are illustrated in the previous steps. The last parameter (`params_window_gui`) controls whether to interactively determine the initial values and ranges of parameters for each iteration. With this setup, no interactive GUI will pop up; thus, it is essential to ensure that the default configuration adequately fits your data. For each extracted spectrum from the IFU data cube, it is recommended to assign a unique folder name, `folder_name`, or file name, `file_name`, within the `line_fitting_exec` class to ensure the saved products are uniquely named. If the local continuum regions or the masked regions differ significantly across these extracted spectra, assigning a unique folder name for each spectrum is recommended. This approach is preferred because the program is designed to find unique `cont_dir` and `lmsk_dir` folders with each respective spectrum.
+6. **(Optional) Replotting Results with Different Plotting Styles**: If you are not satisfied with the default best-fitting plot, you can refer to the `replot_best_fit_results.py` example located in the 
+`veremisfitting/replot_examples` folder. This example demonstrates how to retrieve the best-fitting results from the pipeline and replot them using your own style.
+
+7. **(Optional) Potential Application to IFU Data**: Importing the VerEmisFitting package for fitting spectra extracted from IFU data can be time-consuming and redundant, as it requires repeatedly clicking buttons in every pop-up GUI for each spectrum. Therefore, it is recommended to set `line_select_method = 'txt'`, `fit_window_gui = False`, and `params_window_gui = False`. The first two parameters are illustrated in the previous steps. The last parameter (`params_window_gui`) controls whether to interactively determine the initial values and ranges of parameters for each iteration. With this setup, no interactive GUI will pop up; thus, it is essential to ensure that the default configuration adequately fits your data. For each extracted spectrum from the IFU data cube, it is recommended to assign a unique folder name, `folder_name`, or file name, `file_name`, within the `line_fitting_exec` class to ensure the saved products are uniquely named. If the local continuum regions or the masked regions differ significantly across these extracted spectra, assigning a unique folder name for each spectrum is recommended. This approach is preferred because the program is designed to find unique `cont_dir` and `lmsk_dir` folders with each respective spectrum. An example that applies this pipeline to IFU data can be found in the `ifu_example.py` script located in the `veremisfitting/ifu_apps_examples` folder.
+
+## Citation
+If you utilize VerEmisFitting in your research, please cite Peng et al. (2024, in preparation). A link to the publication will be provided upon its release.
+
+## Contact
+VerEmisFitting is developed and maintained by [Zixuan Peng](mailto:zixuanpeng@ucsb.edu) and [Yuan Li](mailto:yuanli@tamu.edu). For bug reports, questions, or feature requests, please contact us via email.
+
 
 
 

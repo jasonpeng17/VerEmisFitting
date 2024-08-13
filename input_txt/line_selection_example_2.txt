@@ -9,20 +9,20 @@
 
 ######################### Line Selection Keywords
 # selected lines (needs quotation marks for the selected lines)
-selected_lines = '[OIII] 4959'
+selected_lines = 'H delta', 'H gamma', 'H beta'
 
 # fitting methods
 # select from "Free fitting", "Fix velocity centroid", "Fix velocity width", "Fix velocity centroid and width"
 fitting_method = "Free fitting" 
 
 # lines that have multiple emission components (needs quotation marks for the selected lines); if no lines have multiple emission components, input None.
-multi_emis_lines = '[OIII] 4959'
+multi_emis_lines = None
 
 # lines that need double-Gaussian fittings (needs quotation marks for the selected lines); if no lines have multiple emission components, input None.
 double_gauss_lines = None
 
 # lines that need triple-Gaussian fittings (needs quotation marks for the selected lines); if no lines have multiple emission components, input None.
-triple_gauss_lines = '[OIII] 4959'
+triple_gauss_lines = None
 
 # whether the double or triple Gaussian fittings have broad wings or not
 double_gauss_broad = True # sigma_2 > sigma_1
@@ -32,10 +32,10 @@ triple_gauss_broad = True # sigma_3 > sigma_2 > sigma_1
 lorentz_bw_em_lines = None
 
 # absorption troughs that need a Lorentzian function for fitting broad wings (especially for Balmer lines)
-lorentz_bw_abs_lines = None
+lorentz_bw_abs_lines = 'H delta', 'H gamma', 'H beta'
 
 # lines that have an absorption component (needs quotation marks for the selected lines)
-absorption_lines = None
+absorption_lines = 'H delta', 'H gamma', 'H beta'
 
 # set fixed amplitude ratios between two sets of lines (ratio = amp_num / amp_den)
 amp_num_lines = None

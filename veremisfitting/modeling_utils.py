@@ -27,7 +27,7 @@ def lorentzian_1p_v(x, x0, sigma, a):
     model = a * ((sigma**2) / ((x - x0)**2 + sigma**2)) 
     return model
 
-def gaussian_lorentzian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp_second = 1):
+def gaussian_lorentzian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp_second = 1, comp_first_abs = False, comp_second_abs = False, abs_lorentz = False):
     """
     Calculate a Gaussian-Lorentzian model for the blended two peaks like [OII] 3726,29 in velocity space. The Lorentzian model is specifically used for fitting the ling wings in
     some lines (especially strong lines) that cannot be well-fitted by a Gaussian model. Therefore, only the "wing" part is fitted by the Lorentzian model; the Gaussian model is used 
@@ -38,6 +38,9 @@ def gaussian_lorentzian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp
     x2 (array-like): Input x data (in velocity space) for the second line
     num_comp_first: the number of emission components for the first blended peak (1, 2, or 3).
     num_comp_second: the number of emission components for the second blended peak (1, 2, or 3).
+    comp_first_abs: whether the first peak of the doublet has an absorption component or not.
+    comp_second_abs: whether the second peak of the doublet has an absorption component or not.
+    abs_lorentz: whether uses the lorentzian profile to fit the absorption component.
 
     Returns:
     models (tuple): model for each blended peak and the model for the whole double peak line profiles.  
@@ -100,9 +103,28 @@ def gaussian_lorentzian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_3) 
             model += gaussian_1p_v(x2, x0_1, sigma_1, a_2)  + lorentzian_1p_v(x2, x0_2, sigma_2, a_4)
 
+    # check whether each blended peak has an absorption component or not
+    if abs_lorentz:
+        abs_model = lorentzian_1p_v
+    else:
+        abs_model = gaussian_1p_v
+    if comp_first_abs and (not comp_second_abs):
+        x0_a1, sigma_a1, a_a1 = params[-3:]
+        model_line1 += abs_model(x, x0_a1, sigma_a1, a_a1)
+        model += abs_model(x, x0_a1, sigma_a1, a_a1)
+    if (not comp_first_abs) and comp_second_abs:
+        x0_a1, sigma_a1, a_a2 = params[-3:]
+        model_line2 += abs_model(x2, x0_a1, sigma_a1, a_a2)
+        model += abs_model(x2, x0_a1, sigma_a1, a_a2)
+    if comp_first_abs and comp_second_abs:
+        x0_a1, sigma_a1, a_a1, a_a2 = params[-4:]
+        model_line1 += abs_model(x, x0_a1, sigma_a1, a_a1)
+        model_line2 += abs_model(x2, x0_a1, sigma_a1, a_a2)
+        model += abs_model(x, x0_a1, sigma_a1, a_a1) + abs_model(x2, x0_a1, sigma_a1, a_a2)
+
     return model_line1, model_line2, model
 
-def gaussian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp_second = 1):
+def gaussian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp_second = 1, comp_first_abs = False, comp_second_abs = False, abs_lorentz = False):
     """
     Calculate a multi Gaussian model for the blended two peaks like [OII] 3726,29 in velocity space.
 
@@ -111,6 +133,9 @@ def gaussian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp_second = 1
     x2 (array-like): Input x data (in velocity space) for the second line
     num_comp_first: the number of emission components for the first blended peak (1, 2, or 3).
     num_comp_second: the number of emission components for the second blended peak (1, 2, or 3).
+    comp_first_abs: whether the first peak of the doublet has an absorption component or not.
+    comp_second_abs: whether the second peak of the doublet has an absorption component or not.
+    abs_lorentz: whether uses the lorentzian profile to fit the absorption component.
 
     Returns:
     models (tuple): model for each blended peak and the model for the whole double peak line profiles.  
@@ -123,6 +148,7 @@ def gaussian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp_second = 1
 
     # double component 
     if 2 in (num_comp_first, num_comp_second) and 3 not in (num_comp_first, num_comp_second):
+
         if 1 in (num_comp_first, num_comp_second):
             x0_1, sigma_1, a_1 = params[4:7]
             if num_comp_second == 1:
@@ -173,6 +199,25 @@ def gaussian_2p_v_doublet(params, x, x2, num_comp_first = 1, num_comp_second = 1
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_3) 
             model += gaussian_1p_v(x2, x0_1, sigma_1, a_2)  + gaussian_1p_v(x2, x0_2, sigma_2, a_4)
 
+    # check whether each blended peak has an absorption component or not
+    if abs_lorentz:
+        abs_model = lorentzian_1p_v
+    else:
+        abs_model = gaussian_1p_v
+    if comp_first_abs and (not comp_second_abs):
+        x0_a1, sigma_a1, a_a1 = params[-3:]
+        model_line1 += abs_model(x, x0_a1, sigma_a1, a_a1)
+        model += abs_model(x, x0_a1, sigma_a1, a_a1)
+    if (not comp_first_abs) and comp_second_abs:
+        x0_a1, sigma_a1, a_a2 = params[-3:]
+        model_line2 += abs_model(x2, x0_a1, sigma_a1, a_a2)
+        model += abs_model(x2, x0_a1, sigma_a1, a_a2)
+    if comp_first_abs and comp_second_abs:
+        x0_a1, sigma_a1, a_a1, a_a2 = params[-4:]
+        model_line1 += abs_model(x, x0_a1, sigma_a1, a_a1)
+        model_line2 += abs_model(x2, x0_a1, sigma_a1, a_a2)
+        model += abs_model(x, x0_a1, sigma_a1, a_a1) + abs_model(x2, x0_a1, sigma_a1, a_a2)
+
     return model_line1, model_line2, model
 
 def gaussian_2p_v(x, x0, x02, sigma, sigma2, a, a2):
@@ -218,7 +263,8 @@ def gaussian_3p_v(x, x0, x02, x03, sigma, sigma2, sigma3, a, a2, a3):
     model = gaussian_1p_v(x, x0, sigma, a) + gaussian_1p_v(x, x02, sigma2, a2) + gaussian_1p_v(x, x03, sigma3, a3)
     return model
 
-def gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second = 1, num_comp_third = 1):
+def gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second = 1, num_comp_third = 1, comp_first_abs = False, comp_second_abs = False, comp_third_abs = False,
+                                     abs_lorentz = False):
     """
     Calculate a multi-Gaussian model for the blended three peaks like [NII]&H&[NII] 6548&alpha&6583 in velocity space. The Lorentzian model is specifically used for fitting the ling wings in
     some lines (especially strong lines) that cannot be well-fitted by a Gaussian model. Therefore, only the "wing" part is fitted by the Lorentzian model; the Gaussian model is used 
@@ -231,6 +277,10 @@ def gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_
     num_comp_first: the number of emission components for the first blended peak (1, 2, or 3).
     num_comp_second: the number of emission components for the second blended peak (1, 2, or 3).
     num_comp_third: the number of emission components for the third blended peak (1, 2, or 3).
+    comp_first_abs: whether the first peak of the doublet has an absorption component or not.
+    comp_second_abs: whether the second peak of the doublet has an absorption component or not.
+    comp_third_abs: whether the third peak of the doublet has an absorption component or not.
+    abs_lorentz: whether uses the lorentzian profile to fit the absorption component.
 
     Returns:
     models (tuple): model for each blended peak and the model for the whole triple peak line profiles.  
@@ -241,42 +291,41 @@ def gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_
     model_line2 = gaussian_1p_v(x2, x0, sigma, a2)
     model_line3 = gaussian_1p_v(x3, x0, sigma, a3)
     model = model_line1 + model_line2 + model_line3
-    # total number of component
-    tot_num_comp = int(num_comp_first + num_comp_second + num_comp_third)
 
     # double component
     if 2 in (num_comp_first, num_comp_second, num_comp_third) and 3 not in (num_comp_first, num_comp_second, num_comp_third):
-        if tot_num_comp == 4:
-            x0_1, sigma_1, a_1 = params[5:8]
-            if num_comp_first == 2:
-                model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
-                model += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
+        x0_1, sigma_1, a_1 = params[5:8]
+        if num_comp_first == 2 and num_comp_second == 1 and num_comp_third == 1:
+            model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
+            model += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
 
-            elif num_comp_second == 2:
-                model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
-                model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
+        if num_comp_first == 1 and num_comp_second == 2 and num_comp_third == 1:
+            model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
+            model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
 
-            elif num_comp_third == 2:
-                model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_1)
-                model += lorentzian_1p_v(x3, x0_1, sigma_1, a_1)
+        if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 2:
+            model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_1)
+            model += lorentzian_1p_v(x3, x0_1, sigma_1, a_1)
 
-        elif tot_num_comp == 5:
+        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 1:
             a_2 = params[8]
-            if num_comp_first == 2 and num_comp_second == 2:
-                model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1) 
-                model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
-                model += lorentzian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
+            model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1) 
+            model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
+            model += lorentzian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
 
-            elif num_comp_second == 2 and num_comp_third == 2:
-                model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
-                model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
-                model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
+        if num_comp_first == 1 and num_comp_second == 2 and num_comp_third == 2:
+            a_2 = params[8]
+            model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_1)
+            model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
+            model += lorentzian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
 
-            elif num_comp_first == 2 and num_comp_third == 2:
-                model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
-                model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
-                model += lorentzian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
-        else:
+        if num_comp_first == 2 and num_comp_second == 1 and num_comp_third == 2:
+            a_2 = params[8]
+            model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
+            model_line3 += lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
+            model += lorentzian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_1, sigma_1, a_2)
+        
+        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 2:
             a_2, a_3 = params[8:10]
             model_line1 += lorentzian_1p_v(x, x0_1, sigma_1, a_1)
             model_line2 += lorentzian_1p_v(x2, x0_1, sigma_1, a_2)
@@ -285,69 +334,66 @@ def gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_
 
     # triple component    
     if 3 in (num_comp_first, num_comp_second, num_comp_third):
-        if tot_num_comp == 5:
+        if num_comp_first == 3 and num_comp_second == 1 and num_comp_third == 1:
             x0_1, sigma_1, a_1 = params[5:8]
             x0_2, sigma_2, a_2 = params[8:11]
-            if num_comp_first == 3:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_2)
 
-            elif num_comp_second == 3:
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
+        if num_comp_first == 1 and num_comp_second == 3 and num_comp_third == 1:
+            x0_1, sigma_1, a_1 = params[5:8]
+            x0_2, sigma_2, a_2 = params[8:11]
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_2)
 
-            elif num_comp_third == 3:
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_2, sigma_2, a_2)
-                model += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_2, sigma_2, a_2)
-
-        elif tot_num_comp == 6:
+        if num_comp_first == 1 and num_comp_second == 3 and num_comp_third == 2:
             x0_1, sigma_1, a_1, a_2 = params[5:9]
             x0_2, sigma_2, a_3 = params[9:12]
-            if num_comp_second == 3 and num_comp_third == 2:
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
 
-            elif num_comp_second == 2 and num_comp_third == 3:
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x3, x0_2, sigma_2, a_3)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x3, x0_2, sigma_2, a_3)
+        if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 1:
+            x0_1, sigma_1, a_1, a_2 = params[5:9]
+            x0_2, sigma_2, a_3 = params[9:12]
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
 
-            elif num_comp_first == 2 and num_comp_second == 3:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_3)
+        if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 3:
+            x0_1, sigma_1, a_1 = params[5:8]
+            x0_2, sigma_2, a_2 = params[8:11]
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_2, sigma_2, a_2)
+            model += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + lorentzian_1p_v(x3, x0_2, sigma_2, a_2)
 
-            elif num_comp_first == 2 and num_comp_third == 3:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x3, x0_2, sigma_2, a_3)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + lorentzian_1p_v(x3, x0_2, sigma_2, a_3)
-
-        elif tot_num_comp == 7:
+        if num_comp_first == 3 and num_comp_second == 2 and num_comp_third == 2:
             x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
             x0_2, sigma_2, a_4 = params[10:13]
-            if num_comp_second == 2 and num_comp_third == 2:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
 
-            elif num_comp_first == 2 and num_comp_third == 2:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_4)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_4)
+        if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 2:
+            x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
+            x0_2, sigma_2, a_4 = params[10:13]
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_4)
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + lorentzian_1p_v(x2, x0_2, sigma_2, a_4)
 
-            elif num_comp_first == 2 and num_comp_second == 2:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + lorentzian_1p_v(x3, x0_2, sigma_2, a_4)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-                model += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + lorentzian_1p_v(x3, x0_2, sigma_2, a_4)
+        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 3:
+            x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
+            x0_2, sigma_2, a_4 = params[10:13]
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + lorentzian_1p_v(x3, x0_2, sigma_2, a_4)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+            model += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + lorentzian_1p_v(x3, x0_2, sigma_2, a_4)
         
-        elif tot_num_comp == 9:
+        if num_comp_first == 3 and num_comp_second == 3 and num_comp_third == 3:
             x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
             x0_2, sigma_2, a_4, a_5, a_6 = params[10:15]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + lorentzian_1p_v(x, x0_2, sigma_2, a_4)
@@ -356,9 +402,34 @@ def gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
             model += lorentzian_1p_v(x, x0_2, sigma_2, a_4) + lorentzian_1p_v(x2, x0_2, sigma_2, a_5) + lorentzian_1p_v(x3, x0_2, sigma_2, a_6)
 
+    # check whether each blended peak has an absorption component or not
+    if abs_lorentz:
+        abs_model = lorentzian_1p_v
+    else:
+        abs_model = gaussian_1p_v
+    if comp_first_abs and (not comp_second_abs) and (not comp_third_abs):
+        x0_a1, sigma_a1, a_a1 = params[-3:]
+        model_line1 += abs_model(x, x0_a1, sigma_a1, a_a1)
+        model += abs_model(x, x0_a1, sigma_a1, a_a1)
+    if (not comp_first_abs) and comp_second_abs and (not comp_third_abs):
+        x0_a1, sigma_a1, a_a2 = params[-3:]
+        model_line2 += abs_model(x2, x0_a1, sigma_a1, a_a2)
+        model += abs_model(x2, x0_a1, sigma_a1, a_a2)
+    if (not comp_first_abs) and (not comp_second_abs) and comp_third_abs:
+        x0_a1, sigma_a1, a_a3 = params[-3:]
+        model_line3 += abs_model(x3, x0_a1, sigma_a1, a_a3)
+        model += abs_model(x3, x0_a1, sigma_a1, a_a3)
+    if comp_first_abs and comp_second_abs and comp_third_abs:
+        x0_a1, sigma_a1, a_a1, a_a2, a_a3 = params[-5:]
+        model_line1 += abs_model(x, x0_a1, sigma_a1, a_a1)
+        model_line2 += abs_model(x2, x0_a1, sigma_a1, a_a2)
+        model_line3 += abs_model(x3, x0_a1, sigma_a1, a_a3)
+        model += abs_model(x, x0_a1, sigma_a1, a_a1) + abs_model(x2, x0_a1, sigma_a1, a_a2) + abs_model(x3, x0_a1, sigma_a1, a_a3)
+
     return model_line1, model_line2, model_line3, model
 
-def gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second = 1, num_comp_third = 1):
+def gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second = 1, num_comp_third = 1, comp_first_abs = False, comp_second_abs = False, comp_third_abs = False,
+                          abs_lorentz = False):
     """
     Calculate a multi-Gaussian model for the blended three peaks like [NII]&H&[NII] 6548&alpha&6583 in velocity space.
 
@@ -369,6 +440,10 @@ def gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second
     num_comp_first: the number of emission components for the first blended peak (1, 2, or 3).
     num_comp_second: the number of emission components for the second blended peak (1, 2, or 3).
     num_comp_third: the number of emission components for the third blended peak (1, 2, or 3).
+    comp_first_abs: whether the first peak of the doublet has an absorption component or not.
+    comp_second_abs: whether the second peak of the doublet has an absorption component or not.
+    comp_third_abs: whether the third peak of the doublet has an absorption component or not.
+    abs_lorentz: whether uses the lorentzian profile to fit the absorption component.
 
     Returns:
     models (tuple): model for each blended peak and the model for the whole triple peak line profiles.  
@@ -379,42 +454,41 @@ def gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second
     model_line2 = gaussian_1p_v(x2, x0, sigma, a2)
     model_line3 = gaussian_1p_v(x3, x0, sigma, a3)
     model = model_line1 + model_line2 + model_line3
-    # total number of component
-    tot_num_comp = int(num_comp_first + num_comp_second + num_comp_third)
 
     # double component
     if 2 in (num_comp_first, num_comp_second, num_comp_third) and 3 not in (num_comp_first, num_comp_second, num_comp_third):
-        if tot_num_comp == 4:
-            x0_1, sigma_1, a_1 = params[5:8]
-            if num_comp_first == 2:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+        x0_1, sigma_1, a_1 = params[5:8]
+        if num_comp_first == 2 and num_comp_second == 1 and num_comp_third == 1:
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1)
 
-            elif num_comp_second == 2:
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+        if num_comp_first == 1 and num_comp_second == 2 and num_comp_third == 1:
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
 
-            elif num_comp_third == 2:
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1)
-                model += gaussian_1p_v(x3, x0_1, sigma_1, a_1)
+        if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 2:
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1)
+            model += gaussian_1p_v(x3, x0_1, sigma_1, a_1)
 
-        elif tot_num_comp == 5:
+        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 1:
             a_2 = params[8]
-            if num_comp_first == 2 and num_comp_second == 2:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
 
-            elif num_comp_second == 2 and num_comp_third == 2:
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+        if num_comp_first == 1 and num_comp_second == 2 and num_comp_third == 2:
+            a_2 = params[8]
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2)
 
-            elif num_comp_first == 2 and num_comp_third == 2:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-        else:
+        if num_comp_first == 2 and num_comp_second == 1 and num_comp_third == 2:
+            a_2 = params[8]
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+        
+        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 2:
             a_2, a_3 = params[8:10]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
             model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
@@ -423,69 +497,66 @@ def gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second
 
     # triple component    
     if 3 in (num_comp_first, num_comp_second, num_comp_third):
-        if tot_num_comp == 5:
+        if num_comp_first == 3 and num_comp_second == 1 and num_comp_third == 1:
             x0_1, sigma_1, a_1 = params[5:8]
             x0_2, sigma_2, a_2 = params[8:11]
-            if num_comp_first == 3:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_2)
 
-            elif num_comp_second == 3:
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
+        if num_comp_first == 1 and num_comp_second == 3 and num_comp_third == 1:
+            x0_1, sigma_1, a_1 = params[5:8]
+            x0_2, sigma_2, a_2 = params[8:11]
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_2)
 
-            elif num_comp_third == 3:
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_2, sigma_2, a_2)
-                model += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_2, sigma_2, a_2)
-
-        elif tot_num_comp == 6:
+        if num_comp_first == 1 and num_comp_second == 3 and num_comp_third == 2:
             x0_1, sigma_1, a_1, a_2 = params[5:9]
             x0_2, sigma_2, a_3 = params[9:12]
-            if num_comp_second == 3 and num_comp_third == 2:
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2)
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
 
-            elif num_comp_second == 2 and num_comp_third == 3:
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_1)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_2, sigma_2, a_3)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_2, sigma_2, a_3)
+        if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 1:
+            x0_1, sigma_1, a_1, a_2 = params[5:9]
+            x0_2, sigma_2, a_3 = params[9:12]
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
 
-            elif num_comp_first == 2 and num_comp_second == 3:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_3)
+        if num_comp_first == 1 and num_comp_second == 1 and num_comp_third == 3:
+            x0_1, sigma_1, a_1 = params[5:8]
+            x0_2, sigma_2, a_2 = params[8:11]
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_2, sigma_2, a_2)
+            model += gaussian_1p_v(x3, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_2, sigma_2, a_2)
 
-            elif num_comp_first == 2 and num_comp_third == 3:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_2, sigma_2, a_3)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_2, sigma_2, a_3)
-
-        elif tot_num_comp == 7:
+        if num_comp_first == 3 and num_comp_second == 2 and num_comp_third == 2:
             x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
             x0_2, sigma_2, a_4 = params[10:13]
-            if num_comp_second == 2 and num_comp_third == 2:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) 
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
 
-            elif num_comp_first == 2 and num_comp_third == 2:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_4)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
-                model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_4)
+        if num_comp_first == 2 and num_comp_second == 3 and num_comp_third == 2:
+            x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
+            x0_2, sigma_2, a_4 = params[10:13]
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_4)
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
+            model += gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x2, x0_2, sigma_2, a_4)
 
-            elif num_comp_first == 2 and num_comp_second == 2:
-                model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
-                model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-                model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + gaussian_1p_v(x3, x0_2, sigma_2, a_4)
-                model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
-                model += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + gaussian_1p_v(x3, x0_2, sigma_2, a_4)
+        if num_comp_first == 2 and num_comp_second == 2 and num_comp_third == 3:
+            x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
+            x0_2, sigma_2, a_4 = params[10:13]
+            model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) 
+            model_line2 += gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+            model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + gaussian_1p_v(x3, x0_2, sigma_2, a_4)
+            model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2)
+            model += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + gaussian_1p_v(x3, x0_2, sigma_2, a_4)
         
-        elif tot_num_comp == 9:
+        if num_comp_first == 3 and num_comp_second == 3 and num_comp_third == 3:
             x0_1, sigma_1, a_1, a_2, a_3 = params[5:10]
             x0_2, sigma_2, a_4, a_5, a_6 = params[10:15]
             model_line1 += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x, x0_2, sigma_2, a_4)
@@ -493,6 +564,30 @@ def gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = 1, num_comp_second
             model_line3 += gaussian_1p_v(x3, x0_1, sigma_1, a_3) + gaussian_1p_v(x3, x0_2, sigma_2, a_6)
             model += gaussian_1p_v(x, x0_1, sigma_1, a_1) + gaussian_1p_v(x2, x0_1, sigma_1, a_2) + gaussian_1p_v(x3, x0_1, sigma_1, a_3)
             model += gaussian_1p_v(x, x0_2, sigma_2, a_4) + gaussian_1p_v(x2, x0_2, sigma_2, a_5) + gaussian_1p_v(x3, x0_2, sigma_2, a_6)
+
+    # check whether each blended peak has an absorption component or not
+    if abs_lorentz:
+        abs_model = lorentzian_1p_v
+    else:
+        abs_model = gaussian_1p_v
+    if comp_first_abs and (not comp_second_abs) and (not comp_third_abs):
+        x0_a1, sigma_a1, a_a1 = params[-3:]
+        model_line1 += abs_model(x, x0_a1, sigma_a1, a_a1)
+        model += abs_model(x, x0_a1, sigma_a1, a_a1)
+    if (not comp_first_abs) and comp_second_abs and (not comp_third_abs):
+        x0_a1, sigma_a1, a_a2 = params[-3:]
+        model_line2 += abs_model(x2, x0_a1, sigma_a1, a_a2)
+        model += abs_model(x2, x0_a1, sigma_a1, a_a2)
+    if (not comp_first_abs) and (not comp_second_abs) and comp_third_abs:
+        x0_a1, sigma_a1, a_a3 = params[-3:]
+        model_line3 += abs_model(x3, x0_a1, sigma_a1, a_a3)
+        model += abs_model(x3, x0_a1, sigma_a1, a_a3)
+    if comp_first_abs and comp_second_abs and comp_third_abs:
+        x0_a1, sigma_a1, a_a1, a_a2, a_a3 = params[-5:]
+        model_line1 += abs_model(x, x0_a1, sigma_a1, a_a1)
+        model_line2 += abs_model(x2, x0_a1, sigma_a1, a_a2)
+        model_line3 += abs_model(x3, x0_a1, sigma_a1, a_a3)
+        model += abs_model(x, x0_a1, sigma_a1, a_a1) + abs_model(x2, x0_a1, sigma_a1, a_a2) + abs_model(x3, x0_a1, sigma_a1, a_a3)
 
     return model_line1, model_line2, model_line3, model
 
@@ -593,7 +688,7 @@ def residual_2p_v_c(params, x, y, yerr):
     model = gaussian_2p_v(x, x0, x02, sigma, sigma2, a, a2)
     return ((y-model)) / (yerr)
 
-def residual_2p_v_c_doublet(params, x, x2, y, yerr, num_comp_first = 1, num_comp_second = 1):
+def residual_2p_v_c_doublet(params, x, x2, y, yerr, num_comp_first = 1, num_comp_second = 1, comp_first_abs = False, comp_second_abs = False, abs_lorentz = False):
     """
     Calculate the residuals for a two peak Gaussian model for a doublet like [OII] 3726,29 (or other lines that have two peaks that needs to be fitted together).
 
@@ -603,14 +698,17 @@ def residual_2p_v_c_doublet(params, x, x2, y, yerr, num_comp_first = 1, num_comp
         x2 (array): shifted x-data array for [OII] 3729.
         y (array): y-data array.
         yerr (array): y-error array.
+        comp_first_abs (bool): whether the first peak of the doublet has an absorption component or not.
+        comp_second_abs (bool): whether the second peak of the doublet has an absorption component or not.
+        abs_lorentz (bool): whether uses the lorentzian profile to fit the absorption component.
 
     Returns:
         residuals (array): Residuals array for the model.
     """
-    model = gaussian_2p_v_doublet(params, x, x2, num_comp_first=num_comp_first, num_comp_second=num_comp_second)[-1]        
+    model = gaussian_2p_v_doublet(params, x, x2, num_comp_first, num_comp_second, comp_first_abs, comp_second_abs, abs_lorentz)[-1]        
     return (y - model) / yerr
 
-def residual_2p_gl_v_c_doublet(params, x, x2, y, yerr, num_comp_first = 1, num_comp_second = 1):
+def residual_2p_gl_v_c_doublet(params, x, x2, y, yerr, num_comp_first = 1, num_comp_second = 1, comp_first_abs = False, comp_second_abs = False, abs_lorentz = False):
     """
     Calculate the residuals for a two peak Gaussian model for a doublet like [OII] 3726,29 (or other lines that have two peaks that needs to be fitted together).
 
@@ -620,11 +718,14 @@ def residual_2p_gl_v_c_doublet(params, x, x2, y, yerr, num_comp_first = 1, num_c
         x2 (array): shifted x-data array for [OII] 3729.
         y (array): y-data array.
         yerr (array): y-error array.
+        comp_first_abs (bool): whether the first peak of the doublet has an absorption component or not.
+        comp_second_abs (bool): whether the second peak of the doublet has an absorption component or not.
+        abs_lorentz (bool): whether uses the lorentzian profile to fit the absorption component.
 
     Returns:
         residuals (array): Residuals array for the model.
     """
-    model = gaussian_lorentzian_2p_v_doublet(params, x, x2, num_comp_first=num_comp_first, num_comp_second=num_comp_second)[-1]        
+    model = gaussian_lorentzian_2p_v_doublet(params, x, x2, num_comp_first, num_comp_second, comp_first_abs, comp_second_abs, abs_lorentz)[-1]        
     return (y - model) / yerr
 
 def residual_2p_gl_v_c(params, x, y, yerr):
@@ -686,7 +787,8 @@ def residual_3p_gl_v_c(params, x, y, yerr):
     model = gaussian_lorentz_3p_v(x, x0, x02, x03, sigma, sigma2, sigma3, a, a2, a3)
     return ((y-model)) / (yerr)
 
-def residual_3p_v_c_triplet(params, x, x2, x3, y, yerr, num_comp_first = 1, num_comp_second = 1, num_comp_third = 1):
+def residual_3p_v_c_triplet(params, x, x2, x3, y, yerr, num_comp_first = 1, num_comp_second = 1, num_comp_third = 1, comp_first_abs = False, comp_second_abs = False, comp_third_abs = False,
+                            abs_lorentz = False):
     """
     Calculate the residuals for a multi Gaussian model for a triplet (or other lines that have three peaks that needs to be fitted together).
 
@@ -697,16 +799,21 @@ def residual_3p_v_c_triplet(params, x, x2, x3, y, yerr, num_comp_first = 1, num_
         x3 (array): shifted x-data array for the third peak.
         y (array): y-data array.
         yerr (array): y-error array.
+        comp_first_abs (bool): whether the first peak of the doublet has an absorption component or not.
+        comp_second_abs (bool): whether the second peak of the doublet has an absorption component or not.
+        comp_third_abs (bool): whether the third peak of the doublet has an absorption component or not.
+        abs_lorentz (bool): whether uses the lorentzian profile to fit the absorption component.
 
     Returns:
         residuals (array): Residuals array for the model.
     """
-    model = gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first = num_comp_first, num_comp_second = num_comp_second, num_comp_third = num_comp_third)[-1]        
+    model = gaussian_3p_v_triplet(params, x, x2, x3, num_comp_first, num_comp_second, num_comp_third, comp_first_abs, comp_second_abs, comp_third_abs, abs_lorentz)[-1]        
     return (y - model) / yerr
 
-def residual_3p_gl_v_c_triplet(params, x, x2, x3, y, yerr, num_comp_first = 1, num_comp_second = 1, num_comp_third = 1):
+def residual_3p_gl_v_c_triplet(params, x, x2, x3, y, yerr, num_comp_first = 1, num_comp_second = 1, num_comp_third = 1, comp_first_abs = False, comp_second_abs = False, comp_third_abs = False,
+                               abs_lorentz = False):
     """
-    Calculate the residuals for a multi Gaussian model for a triplet (or other lines that have three peaks that needs to be fitted together).
+    Calculate the residuals for a multi Gaussian-Lorentzian model for a triplet (or other lines that have three peaks that needs to be fitted together).
 
     Args:
         params (list): List of parameters (x0, sigma, a, a2, a3) and etc.
@@ -715,9 +822,19 @@ def residual_3p_gl_v_c_triplet(params, x, x2, x3, y, yerr, num_comp_first = 1, n
         x3 (array): shifted x-data array for the third peak.
         y (array): y-data array.
         yerr (array): y-error array.
+        comp_first_abs (bool): whether the first peak of the doublet has an absorption component or not.
+        comp_second_abs (bool): whether the second peak of the doublet has an absorption component or not.
+        comp_third_abs (bool): whether the third peak of the doublet has an absorption component or not.
+        abs_lorentz (bool): whether uses the lorentzian profile to fit the absorption component.
 
     Returns:
         residuals (array): Residuals array for the model.
     """
-    model = gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first = num_comp_first, num_comp_second = num_comp_second, num_comp_third = num_comp_third)[-1]        
+    model = gaussian_lorentzian_3p_v_triplet(params, x, x2, x3, num_comp_first, num_comp_second, num_comp_third, comp_first_abs, comp_second_abs, comp_third_abs, abs_lorentz)[-1]        
     return (y - model) / yerr
+
+
+
+
+
+    

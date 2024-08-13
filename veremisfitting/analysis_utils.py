@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.stats import f
+from scipy.integrate import simps
 from astropy import constants as const
 from astropy.stats import sigma_clip, sigma_clipped_stats
 
@@ -132,40 +133,67 @@ def f_test(chi1, chi2, n, p1=3, p2=6, alpha =0.003):
         # two or three gaussian model doesn't provide a statistically better result
         return False
 
-def calc_ew(model_w, wave_line, cont_line):
+# def calc_ew(model_w, wave_line, cont_line):
+#     '''
+#     Calculates the equivalent width (EW) of a spectral line.
+
+#     Parameters:
+#     model_w (array_like): The model spectrum in wavelength space (background subtracted).
+#     wave_line (array_like): The wavelengths of the spectral line profile.
+#     cont_line (float): The background continuum level.
+
+#     Returns:
+#     float: The equivalent width of the spectral line.
+#     '''
+#     flux_all = (-model_w) / cont_line
+#     ew_all = np.abs(flux_all[:-1] * np.diff(wave_line))
+#     ew_all = ew_all.sum()
+#     return ew_all
+
+# def calc_ew_err(model_w, sigma_w, cont_line):
+#     '''
+#     Calculates the error of the equivalent width (EW) of a spectral line.
+
+#     Parameters:
+#     model_w (array_like): The model spectrum in wavelength space (background subtracted).
+#     sigma_w (array_like): The standard deviation of the model spectrum.
+#     cont_line (float): The continuum level.
+
+#     Returns:
+#     float: The error of the equivalent width of the spectral line.
+#     '''
+#     FWHM_all = 2 * sigma_w * np.sqrt(2 * np.log(2))
+#     r_i_all = (-model_w) / cont_line
+#     epsilon_all = np.sqrt(np.sum((r_i_all - np.mean(r_i_all))**2) / len(r_i_all))
+#     ew_all_err = 1.5 * np.sqrt(FWHM_all * 0.5) * epsilon_all
+#     return ew_all_err
+
+def calc_ew_with_err(model_w, wave_line, sigma_w, cont_line, guass_or_lorentz = 'gauss'):
     '''
-    Calculates the equivalent width (EW) of a spectral line.
+    Calculates the error of the equivalent width (EW) of a spectral line (based on Equation 7 of Cayrel 1988).
 
     Parameters:
     model_w (array_like): The model spectrum in wavelength space (background subtracted).
     wave_line (array_like): The wavelengths of the spectral line profile.
-    cont_line (float): The background continuum level.
-
-    Returns:
-    float: The equivalent width of the spectral line.
-    '''
-    flux_all = (-model_w) / cont_line
-    ew_all = np.abs(flux_all[:-1] * np.diff(wave_line))
-    ew_all = ew_all.sum()
-    return ew_all
-
-def calc_ew_err(model_w, sigma_w, cont_line):
-    '''
-    Calculates the error of the equivalent width (EW) of a spectral line.
-
-    Parameters:
-    model_w (array_like): The model spectrum in wavelength space (background subtracted).
     sigma_w (array_like): The standard deviation of the model spectrum.
     cont_line (float): The continuum level.
 
     Returns:
     float: The error of the equivalent width of the spectral line.
     '''
-    FWHM_all = 2 * sigma_w * np.sqrt(2 * np.log(2))
+    # calculate ew using the simpson method
     r_i_all = (-model_w) / cont_line
+    ew_all = np.abs(simps(r_i_all, wave_line))
+
+    # calculate the ew error
+    delta_x_median = np.median(np.diff(wave_line))
     epsilon_all = np.sqrt(np.sum((r_i_all - np.mean(r_i_all))**2) / len(r_i_all))
-    ew_all_err = 1.5 * np.sqrt(FWHM_all * 0.5) * epsilon_all
-    return ew_all_err
+    if guass_or_lorentz == 'gauss':
+        ew_all_err = 2.45 * np.sqrt(sigma_w * delta_x_median) * epsilon_all
+    elif guass_or_lorentz == 'lorentz':
+        # assume sigma_g = sqrt(pi / 2) * sigma_l (for which the two profiles yield identical total line fluxes)
+        ew_all_err = 2.74 * np.sqrt(sigma_w * delta_x_median) * epsilon_all
+    return ew_all, ew_all_err
 
 def calc_com(v_arr, flux_arr):
     """

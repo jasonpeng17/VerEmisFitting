@@ -115,7 +115,8 @@ def extract_line_pars(filename, return_amps_fixed_dict = False):
         'absorption_lines': None,
         'double_gauss_broad': None,
         'triple_gauss_broad': None,
-        'lorentz_bw_lines': None,
+        'lorentz_bw_em_lines': None,
+        'lorentz_bw_abs_lines': None,
         'amp_num_lines' : None,
         'amp_den_lines' : None,
         'amp_fixed_ratio': None

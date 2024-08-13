@@ -23,8 +23,8 @@ from tkinter.simpledialog import askstring
 from tkinter.filedialog import askopenfilename
 
 from IPython import embed
-from analysis_utils import *
-from params_gui import *
+from veremisfitting.analysis_utils import *
+from veremisfitting.params_gui import *
 
 class LineSelector(tk.Tk):
     """
@@ -301,28 +301,102 @@ class LineSelector(tk.Tk):
             self.fitting_function_window.destroy()
         except:
             self.fitting_functions_choices = {}
-        # create a new window to select lines for fitting "absorption"
+
+        # Create a new window to select lines for fitting "absorption"
         self.absorption_window = ttk.Toplevel(self)
         self.absorption_window.title("Select lines that have 'absorption troughs'")
-        self.check_vars_absorption = [tk.StringVar(value="") for line in self.selected_lines]
+        self.check_vars_absorption = []
+        self.checks_absorption = []
 
-        for i in range(len(self.selected_lines)):
-            check = ttk.Checkbutton(self.absorption_window, variable=self.check_vars_absorption[i],
-                                   onvalue=self.selected_lines[i], offvalue="", bootstyle= 'primary')
-            check.grid(row=i, column=0, sticky='w')
-            label = ttk.Label(self.absorption_window, text=self.selected_lines[i])
-            label.grid(row=i, column=1, sticky='w')
+        # Define the row number
+        row_i = 0
 
-        ttk.Button(self.absorption_window, text="Confirm", command=self.get_selected_lines, bootstyle= 'success').grid(row=i+1, column=0, columnspan=10)
+        for i, line in enumerate(self.selected_lines):
+            # Single line profile
+            if '&' not in line:
+                var = tk.StringVar(value="")
+                self.check_vars_absorption.append(var)
+
+                check = ttk.Checkbutton(self.absorption_window, variable=var, onvalue=line, offvalue="", bootstyle='primary')
+                check.grid(row=row_i, column=0, sticky='w')
+                self.checks_absorption.append(check)
+
+                label = ttk.Label(self.absorption_window, text=line)
+                label.grid(row=row_i, column=1, sticky='w')
+
+                # Increase the row number by 1
+                row_i += 1
+            
+            # Multi-component line profile that needs to be fitted together
+            else:
+                multilet_lines = split_multilet_line(line)
+                for indx, line in enumerate(multilet_lines):
+                    # Create a check and a label for each subline
+                    var = tk.StringVar(value="")
+                    self.check_vars_absorption.append(var)
+
+                    check = ttk.Checkbutton(self.absorption_window, variable=var, onvalue=line, offvalue="", bootstyle='primary')
+                    check.grid(row=row_i, column=0, sticky='w')
+                    self.checks_absorption.append(check)
+
+                    label = ttk.Label(self.absorption_window, text=line)
+                    label.grid(row=row_i, column=1, sticky='w')
+
+                    # Increase the row number by 1
+                    row_i += 1
+        
+        # Add the Confirm button and attach it to the new method
+        ttk.Button(self.absorption_window, text="Confirm", command=self.confirm_absorption_selection, bootstyle='success').grid(row=row_i + 1, column=0, columnspan=10)
 
         # Raise the window to the top
         self.absorption_window.lift()
         self.absorption_window.focus_force()
         self.absorption_window.minsize(400, 300)  # Set minimum size of the window
 
-    def get_selected_lines(self):
+    def confirm_absorption_selection(self):
+        if any(var.get() for var in self.check_vars_absorption):
+            self.process_selected_absorption_lines()
+        else:
+            self.get_selected_lines()
+
+    def process_selected_absorption_lines(self):
         self.absorption_lines = [var.get() for var in self.check_vars_absorption if var.get()]
         self.absorption_window.destroy()
+        if self.absorption_lines:
+            self.select_fitting_window_abs(self.absorption_lines)
+
+    def select_fitting_window_abs(self, absorption_lines):
+        # Create a new window to select the fitting function for absorption lines
+        self.fitting_function_window_abs = ttk.Toplevel(self)
+        self.fitting_function_window_abs.title("Select the fitting function for absorption lines")
+
+        # Create a Label widget for the message
+        self.bw_message_abs = ttk.Label(self.fitting_function_window_abs, 
+                                    text="Notice: the Lorentzian model is specifically used for fitting the absorption broad wings in lines (especially for Balmer lines) that cannot be well-fitted by a Gaussian model.", 
+                                    font=self.font_txt_tuple, wraplength=500, justify=tk.LEFT)
+        self.bw_message_abs.grid(row=0, column=0, sticky='w')
+
+        self.fitting_functions_vars_abs = {}
+        for i, line in enumerate(absorption_lines):
+            self.fitting_functions_vars_abs[line] = tk.StringVar(value="Gaussian")
+            ttk.Label(self.fitting_function_window_abs, text=f"{line}:").grid(row=i+1, column=0, sticky='w', padx=(10, 0))
+            ttk.Radiobutton(self.fitting_function_window_abs, text="Gaussian", variable=self.fitting_functions_vars_abs[line], value="Gaussian").grid(row=i+1, column=1, sticky='w')
+            ttk.Radiobutton(self.fitting_function_window_abs, text="Lorentzian", variable=self.fitting_functions_vars_abs[line], value="Lorentzian").grid(row=i+1, column=2, sticky='w')
+
+        ttk.Button(self.fitting_function_window_abs, text="Confirm", command=self.get_selected_lines, bootstyle='success').grid(row=len(absorption_lines) + 1, column=0, columnspan=3)
+
+        # Raise the window to the top
+        self.fitting_function_window_abs.lift()
+        self.fitting_function_window_abs.focus_force()
+        self.fitting_function_window_abs.minsize(300, 100 + len(absorption_lines) * 30)  # Set minimum size of the window
+
+    def get_selected_lines(self):
+        try:
+            self.fitting_functions_choices_abs = {line: var.get() for line, var in self.fitting_functions_vars_abs.items()}
+            self.fitting_function_window_abs.destroy()
+        except:
+            self.fitting_functions_choices_abs = {}
+            self.absorption_lines = []
 
         # Call FitParamsWindow
         fit_window = FitParamsWindow(self.selected_lines, self.broad_wings_lines, self.triple_gauss_lines, self.absorption_lines)
@@ -331,13 +405,9 @@ class LineSelector(tk.Tk):
         # Close the LineSelector window
         self.quit()
 
-        # Close the LineSelector window
-        # self.destroy()
-
     def run(self):
         self.mainloop()
-        # self.destroy()
-        return self.selected_lines, self.selected_fitting_method, self.broad_wings_lines, self.double_gauss_lines, self.triple_gauss_lines, self.absorption_lines, self.fitting_functions_choices
+        return self.selected_lines, self.selected_fitting_method, self.broad_wings_lines, self.double_gauss_lines, self.triple_gauss_lines, self.absorption_lines, self.fitting_functions_choices, self.fitting_functions_choices_abs
 
 # TESTING:
 if __name__ == "__main__":

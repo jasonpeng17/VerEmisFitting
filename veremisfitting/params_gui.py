@@ -137,7 +137,7 @@ class FitParamsWindow(tk.Tk):
             if self.triple_gauss_lines:
                 self.create_section_label('Third Emission Component', content_frame)
                 self.create_entry('center_b2', 0, content_frame)
-                self.create_entry('sigma_b2', 300, content_frame)
+                self.create_entry('sigma_b2', 400, content_frame)
                 for line in self.triple_gauss_lines:
                     self.create_amp_entry(line, '_b2', 'b2', content_frame)
                 self.guess_column += 1
@@ -147,7 +147,7 @@ class FitParamsWindow(tk.Tk):
             if self.absorption_lines:
                 self.create_section_label('Absorption Component', content_frame)
                 self.create_entry('center_a', 0, content_frame)
-                self.create_entry('sigma_a', 900, content_frame)
+                self.create_entry('sigma_a', 1200, content_frame)
                 for line in self.absorption_lines:
                     self.create_amp_entry(line, '_abs', 'abs', content_frame)
                 self.guess_column += 1
@@ -192,17 +192,17 @@ class FitParamsWindow(tk.Tk):
         if self.triple_gauss_lines:
             # third emission component's center and sigma values and ranges
             self.params_values['center_b2'] = 0
-            self.params_values['sigma_b2'] = 300
+            self.params_values['sigma_b2'] = 400
             self.params_range_values['center_b2'] = 10
-            self.params_range_values['sigma_b2'] = 200
+            self.params_range_values['sigma_b2'] = 300
 
         # Absorption component
         if self.absorption_lines:
             # absorption component's center and sigma values and ranges
             self.params_values['center_a'] = 0
-            self.params_values['sigma_a'] = 900
+            self.params_values['sigma_a'] = 1200
             self.params_range_values['center_a'] = 10
-            self.params_range_values['sigma_a'] = 400
+            self.params_range_values['sigma_a'] = 500
 
         # for each selected line
         for line in self.selected_lines:
@@ -228,8 +228,8 @@ class FitParamsWindow(tk.Tk):
         # for each abs_gauss line
         for abs_line in self.absorption_lines:
             amp_abs = 'amp_{}'.format(abs_line.split(' ')[1]) + '_abs'
-            self.params_values[amp_abs] = 0.01
-            self.params_range_values[amp_abs] = 0.01
+            self.params_values[amp_abs] = -0.05
+            self.params_range_values[amp_abs] = 0.05
 
         # Set default amplitude ratios if needed
         self.amplitude_ratios = {}
@@ -309,7 +309,7 @@ class FitParamsWindow(tk.Tk):
         if self.selected_lines:
             self.create_section_label('First Emission Component', content_frame, window='range')
             self.create_entry('center_e', 10, content_frame, window='range')
-            self.create_entry('sigma_e', 30, content_frame, window='range')
+            self.create_entry('sigma_e', 50, content_frame, window='range')
             for line in self.selected_lines:
                 self.create_amp_entry(line, '', 'e', content_frame, window='range')
             self.range_column += 1
@@ -327,7 +327,7 @@ class FitParamsWindow(tk.Tk):
         if self.triple_gauss_lines:
             self.create_section_label('Third Emission Component', content_frame, window='range')
             self.create_entry('center_b2', 10, content_frame, window='range')
-            self.create_entry('sigma_b2', 200, content_frame, window='range')
+            self.create_entry('sigma_b2', 300, content_frame, window='range')
             for line in self.triple_gauss_lines:
                 self.create_amp_entry(line, '_b2', 'b2', content_frame, window='range')
             self.range_column += 1
@@ -336,7 +336,7 @@ class FitParamsWindow(tk.Tk):
         if self.absorption_lines:
             self.create_section_label('Absorption Component', content_frame, window='range')
             self.create_entry('center_a', 10, content_frame, window='range')
-            self.create_entry('sigma_a', 400, content_frame, window='range')
+            self.create_entry('sigma_a', 500, content_frame, window='range')
             for line in self.absorption_lines:
                 self.create_amp_entry(line, '_abs', 'abs', content_frame, window='range')
             self.range_column += 1
