@@ -117,6 +117,7 @@ for ax in axes[0]:
 # initialize the local continuum of each line profile in velocity space
 cont_line_v_dict = dict()
 flux_plus_cont_v_dict = dict()
+flux_plus_cont_v_dict_2 = dict()
 model_plus_cont_v_dict = dict()
 # whether include broad_wings_lines
 if region.broad_wings_lines:
@@ -148,8 +149,8 @@ for line in region.selected_lines:
     # single line profile
     else: # General case
         cont_line_v_dict[line] = region.cont_line_dict[line][0] * chosen_line_wave / region.c
-    # self.flux_plus_cont_v_dict[line] = self.flux_v_dict[line] + self.cont_line_v_dict[line]
-    flux_plus_cont_v_dict[line] = region.flux_v_c_dict[line]
+    flux_plus_cont_v_dict[line] = region.flux_v_c_dict[line] # unmasked version (no continuum subtracted)
+    flux_plus_cont_v_dict_2[line] = region.flux_v_dict[line] + cont_line_v_dict[line]
     model_plus_cont_v_dict[line] = region.model_dict[line] + cont_line_v_dict[line]
     # whether include broad_wings_lines
     if line in region.broad_wings_lines:
@@ -189,8 +190,8 @@ for i, line in enumerate(region.selected_lines):
         line_name = line
     # upper panel for plotting the raw and best-fitting line profile
     axes[0,i].step(v_c_arr, flux_plus_cont_v_dict[line]/np.max(flux_plus_cont_v_dict[line]), 'k', where = 'mid')
-    axes[0,i].fill_between(v_c_arr, (flux_plus_cont_v_dict[line]-region.err_v_c_dict[line]) / np.max(flux_plus_cont_v_dict[line]),
-                          (flux_plus_cont_v_dict[line]+region.err_v_c_dict[line]) / np.max(flux_plus_cont_v_dict[line]), alpha =0.5, zorder = 1, facecolor = 'black')
+    # axes[0,i].fill_between(v_c_arr, (flux_plus_cont_v_dict[line]-region.err_v_c_dict[line]) / np.max(flux_plus_cont_v_dict[line]),
+    #                       (flux_plus_cont_v_dict[line]+region.err_v_c_dict[line]) / np.max(flux_plus_cont_v_dict[line]), alpha =0.5, zorder = 1, facecolor = 'black')
     axes[0,i].plot(v_arr, model_plus_cont_v_dict[line] / np.max(flux_plus_cont_v_dict[line]), 'r--', zorder = 2, lw = 2)
     if line in region.broad_wings_lines:
         axes[0,i].plot(v_arr, best_model_plus_cont_n_v_dict[line] / np.max(flux_plus_cont_v_dict[line]), 'c--',
@@ -228,12 +229,42 @@ for i, line in enumerate(region.selected_lines):
     try:
         lmsks = region.lmsks_dict[line]
         if len(lmsks) >= 1:
+            masked_regions = []
             for ml in lmsks:
                 x_lmsk = np.linspace(ml['w0'], ml['w1'], 100)
                 v_lmsk = (x_lmsk / chosen_line_wave - 1) * region.c
                 axes[0,i].fill_between(v_lmsk, ymin, ymax, alpha=0.3, zorder=1, facecolor='orange')
                 axes[1,i].fill_between(v_lmsk, ymin2, ymax2, alpha=0.3, zorder=1, facecolor='orange')
-    except KeyError:
+
+                # save the bounds of the masked region in velocity units
+                masked_regions.append([v_lmsk[0], v_lmsk[-1]])
+
+            # Mask and plot regions outside the masked areas
+            errorbar_mask = np.where(v_arr <= masked_regions[0][0])
+            errorbar_mask2 = np.where(v_arr >= masked_regions[-1][-1])
+
+            # Plot the flux/error masked regions
+            for errorbar_msk in [errorbar_mask, errorbar_mask2]:
+                axes[0,i].fill_between(
+                    v_arr[errorbar_msk],
+                    (flux_plus_cont_v_dict_2[line][errorbar_msk] - region.err_v_dict[line][errorbar_msk]) / np.max(flux_plus_cont_v_dict[line]),
+                    (flux_plus_cont_v_dict_2[line][errorbar_msk] + region.err_v_dict[line][errorbar_msk]) / np.max(flux_plus_cont_v_dict[line]),
+                    alpha=0.5, zorder=1, facecolor='black'
+                )
+
+            # Mask and plot the intermediate regions
+            for indx in range(1, len(masked_regions)):
+                errorbar_mask = np.where((v_arr >= masked_regions[indx-1][-1]) & (v_arr <= masked_regions[indx][0]))
+                axes[0,i].fill_between(
+                    v_arr[errorbar_mask],
+                    (flux_plus_cont_v_dict_2[line][errorbar_mask] - region.err_v_dict[line][errorbar_mask]) / np.max(flux_plus_cont_v_dict[line]),
+                    (flux_plus_cont_v_dict_2[line][errorbar_mask] + region.err_v_dict[line][errorbar_mask]) / np.max(flux_plus_cont_v_dict[line]),
+                    alpha=0.5, zorder=1, facecolor='black'
+                )
+    except:
+        axes[0,i].fill_between(v_arr, (flux_plus_cont_v_dict_2[line]-region.err_v_dict[line]) / np.max(flux_plus_cont_v_dict[line]),
+                               (flux_plus_cont_v_dict_2[line]+region.err_v_dict[line]) / np.max(flux_plus_cont_v_dict[line]), 
+                               alpha = 0.5, zorder = 1, facecolor = 'black')
         print(f"\nno masked regions to plot for {line}.")
 
 # define the current working directory
