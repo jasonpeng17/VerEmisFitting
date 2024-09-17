@@ -14,6 +14,8 @@ from bokeh.models import Column
 from termcolor import colored
 import numpy as np
 
+from IPython import embed
+
 class FittingWindow:
     def __init__(self, wave, flux, folder_name = None, line_name = None, indx = 0, bokeh_session = None):
         self.wave = wave # input wavelength arr
@@ -46,7 +48,7 @@ class FittingWindow:
         self.bokeh_process = subprocess.Popen(["bokeh", "serve"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Wait a bit for the server to start
-        time.sleep(1)
+        time.sleep(3) # TODO: edit this line to avoid waiting too long.
         print("Bokeh server started.")
 
     def stop_bokeh_server(self):
@@ -238,19 +240,21 @@ class FittingWindow:
 
 
     def run_process(self, x0, x1, x2, x3, x4, mask_lines = False):
-        # Step 1: Plot the whole spectrum
-        print(colored("CHECKING LINE FITTING WINDOW AND LOCAL CONTINUUM REGIONS", 'green', attrs=['bold', 'underline']))
-        print(colored(f"Current line fitting window: {x1:.1f} (x1) - {x2:.1f} (x2) Angstroms (red vertical solid lines)", 'green', attrs=['bold']))
-        print(colored(f"Current local continuum regions: {x1:.1f} (x1) - {x3:.1f} (x3) Angstroms and {x4:.1f} (x4) - {x2:.1f} (x2) Angstroms", 'green', attrs=['bold']))
-        print(colored(f"A <cr> will accept current values or enter new values to determine a new line fitting window or local continuum regions.", 'green', attrs=['bold']))
-        print(colored(f"Hover the cursor over spectrum to find wavelengths. \n", 'green', attrs=['bold']))
-
+        # initialize the current local continuum regions
         done = False # initialize the done value to be False 
         # find local continuum region file
         cont, conthdr = self.find_local_cont_file(self.line_name)
         if len(cont) == 1:
             for ct in cont:
                 x1, x2, x3, x4 = ct['x1'], ct['x2'], ct['x3'], ct['x4']
+
+        # plot the whole spectrum and print the essential messages
+        print(colored("\nCHECKING LINE FITTING WINDOW AND LOCAL CONTINUUM REGIONS", 'green', attrs=['bold', 'underline']))
+        print(colored(f"Current line fitting window: {x1:.1f} (x1) - {x2:.1f} (x2) Angstroms (red vertical solid lines)", 'green', attrs=['bold']))
+        print(colored(f"Current local continuum regions: {x1:.1f} (x1) - {x3:.1f} (x3) Angstroms and {x4:.1f} (x4) - {x2:.1f} (x2) Angstroms", 'green', attrs=['bold']))
+        print(colored(f"A <cr> will accept current values or enter new values to determine a new line fitting window or local continuum regions.", 'green', attrs=['bold']))
+        print(colored(f"Hover the cursor over spectrum to find wavelengths.", 'green', attrs=['bold']))
+
         # interactively set wavelength limits
         while not done:
             # create the bokeh figure
@@ -263,8 +267,8 @@ class FittingWindow:
             # plot spectrum with central wavelength, fitting window, and local continuum regions
             self.plot_with_window(p, x0, x1, x2, x3, x4)
             self.bokeh_plot(p, self.session)
-            input_str = input("Enter new left and right boundaries for fitting window and local continuum regions"
-                              "x1: <float> x2: <float> x3: <float> x4: <float> comment: <str> (<cr> - done): ")
+            input_str = input("\nEnter new left and right boundaries for fitting window and local continuum regions"
+                              "\nx1: <float> x2: <float> x3: <float> x4: <float> comment: <str> (<cr> - done): ")
             if len(input_str) <= 0:
                 done = True
             else:
@@ -333,8 +337,8 @@ class FittingWindow:
 
                 self.bokeh_plot(p, self.session)
                 newl_list = []
-                lmsk_str = input("Mask line: wavelength start stop (Ang) comment "
-                                 "<float> <float> <str> (<cr> - done): ")
+                lmsk_str = input("\nMask line: wavelength start stop (Ang) comment "
+                                 "\n<float> <float> <str> (<cr> - done): ")
                 if len(lmsk_str) <= 0:
                     done_mask = True
                 else:

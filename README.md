@@ -4,7 +4,7 @@
 
 ## Installation
 
-For installing the ver_emis_fitting environment:
+For installing the veremisfit environment:
 
 1. With an environment definition YML file, users can build the environment with:
 ```
@@ -13,7 +13,7 @@ conda env create -f environment.yml
 
 2. Activating an environment: 
 ```
-conda activate ver_emis_fitting
+conda activate veremisfit
 ```
 
 3. To deactivate an environment:
@@ -25,12 +25,12 @@ conda deactivate
 
 - To delete an environment with all of its packages:
 ```
-conda env remove -n ver_emis_fitting
+conda env remove -n veremisfit
 ```
 
 - To rename a conda environment:
 ```
-conda create --name <new environment name> --clone ver_emis_fitting
+conda create --name <new environment name> --clone veremisfit
 ```
 
 ## Running
@@ -118,7 +118,7 @@ Checking the line-fitting outputs:
 
 The `vac_wavelengths.txt` or `air_wavelengths.txt` file in the `doc` folder contain the lines available for fitting, as shown in the line-selection GUI. Users can modify these files by adding new lines or editing existing ones, following the provided format. For example, `[OIII] 4363: 4364.44` indicates that the line `[OIII] 4363` has a (vacuum) wavelength of `4364.44` Angstroms. It's recommended to categorize each line under the specific element section (e.g., `<Oxygen>` for `[OIII] 4363`), so that the added line appears under that element in the line-selection GUI. Comments can be included by starting a line with '#'.
 
-After adding a particular line to both wavelength files, users should also add this line to the `default_window_vspace.txt` file in the `doc` folder such that the pipeline can generate a default line-fitting window for this line. For example, `[OIII] 4363: 600` means the line `[OIII] 4363` has a half velocity width of the line-fitting window of 800 km/s (or equivalently, a total velocity width of 1600 km/s). **The left and right local continuum regions are, by default, set to the first and last 10% of the wavelength range of the line-fitting window, respectively.**
+After adding a particular line to both wavelength files, users should also add this line to the `default_window_vspace.txt` file in the `doc` folder such that the pipeline can generate a default line-fitting window for this line. For example, `[OIII] 4363: 800` means the line `[OIII] 4363` has a half velocity width of the line-fitting window of 800 km/s (or equivalently, a total velocity width of 1600 km/s). **The left and right local continuum regions are, by default, set to the first and last 10% of the wavelength range of the line-fitting window, respectively.**
 
 ## Recommended Fitting Procedures
 
@@ -140,7 +140,7 @@ After adding a particular line to both wavelength files, users should also add t
 7. **(Optional) Potential Application to IFU Data**: Importing the VerEmisFitting package for fitting spectra extracted from IFU data can be time-consuming and redundant, as it requires repeatedly clicking buttons in every pop-up GUI for each spectrum. Therefore, it is recommended to set `line_select_method = 'txt'`, `fit_window_gui = False`, and `params_window_gui = False`. The first two parameters are illustrated in the previous steps. The last parameter (`params_window_gui`) controls whether to interactively determine the initial values and ranges of parameters for each iteration. With this setup, no interactive GUI will pop up; thus, it is essential to ensure that the default configuration adequately fits your data. For each extracted spectrum from the IFU data cube, it is recommended to assign a unique folder name, `folder_name`, or file name, `file_name`, within the `line_fitting_exec` class to ensure the saved products are uniquely named. If the local continuum regions or the masked regions differ significantly across these extracted spectra, assigning a unique `folder_name` for each spectrum is recommended. This approach is preferred because the program is designed to find unique `cont_dir` and `lmsk_dir` folders with each respective spectrum. **An example that applies this pipeline to IFU data can be found in the `ifu_example.py` script located in the `veremisfitting/ifu_apps_examples` folder.**
 
 ## Citation
-If you utilize VerEmisFitting in your research, please cite Peng et al. (2024, in preparation). A link to the publication will be provided upon its release.
+If you utilize VerEmisFitting in your research, please cite Peng et al. (2024, submitted to ApJ). A link to the publication will be provided upon its release.
 
 ## Contact
 VerEmisFitting is developed and maintained by [Zixuan Peng](mailto:zixuanpeng@ucsb.edu) and [Yuan Li](mailto:yuanli@tamu.edu). For bug reports, questions, or feature requests, please contact us via email.
