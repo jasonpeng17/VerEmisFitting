@@ -27,7 +27,7 @@ line_select_method = 'txt'
 # text file for selecting intended lines for fitting
 input_example_txt = current_direc + '/input_txt/line_selection_example.txt' 
 # whether to interactively determine the fitting window, local continuum regions, and masking lines 
-fit_window_gui = False # if False, use the default values 
+fit_window_gui = True # if False, use the default values 
 # whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is False (i.e., pop up the window)
 params_windows_gui = False # if False, use the default parameter initial values and corresponding ranges for each iteration
 # define the folder name 
@@ -48,15 +48,15 @@ region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, folder_
                            input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, params_windows_gui = params_windows_gui,
                            sigma_min = sigma_min, sigma_max_e = sigma_max_e, sigma_max_a = sigma_max_a, fit_algorithm = fit_algorithm)
 
-# "n_iteration = 1000" defines the number of iterations you want to run
-# "get_flux = True" defines if you want the return to be the flux dict (includes the flux of each line profile) or not; if False, then the return is the best-fitting parameters
+# "n_iteration" defines the number of iterations you want to run
+# "get_flux = True" defines if you want the return to be the flux dictionary (includes the flux of each line profile) or not; if False, then the return is the best-fitting parameters
 # "get_error = True" defines if you want to calculate the error of each line flux 
 # "get_ew = True" defines if you want to calculate the ew(s) of the selected emission lines (including emission and absorption ew(s))
 # "save_flux_table = True" defines if you want to save the best-fitting flux pandas table for each line.
 # "save_ew_table = True" defines if you want to save the best-fitting equivalent width pandas table for each line.
 # "save_par_table = True" defines if you want to save the best-fitting parameter pandas table for each velocity component.
 # "save_stats_table = True" defines if you want to save the best-fitting statistics pandas table for each selected line.
-# "save_cont_params_table = True" defines if you want to save the best-fitting parameters for continuum fit for each line.
+# "save_cont_params_table = True" defines if you want to save the best-fitting parameters for the continuum fit of each line.
 region.all_lines_result(wave, spec, err, n_iteration = 100, get_flux = True, save_flux_table = True, get_ew = True, save_ew_table = True, get_error = True, 
                         save_par_table = True, save_stats_table = True, save_cont_params_table = True)
 

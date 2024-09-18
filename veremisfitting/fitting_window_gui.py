@@ -300,9 +300,9 @@ class FittingWindow:
                           'x4': x4,
                           'com': "default values"}
                 cont.append(ctdict)
-                print("\nno new local continuum regions updated and save default values")
+                print("\nno new local continuum regions updated and save default values\n")
             else:
-                print("\nno new local continuum regions updated")
+                print("\nno new local continuum regions updated\n")
         boundary = np.array([x1, x2, x3, x4])
         self.save_cont_list(cont, conthdr)
         # END: interactively identify lines
