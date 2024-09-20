@@ -32,8 +32,9 @@ from veremisfitting.analysis_utils import *
 from IPython import embed
 
 class line_fitting_exec():
-    def __init__(self, redshift = None, vac_or_air = 'air', seed = 42, folder_name = None, file_name = None, line_select_method = 'gui', input_txt = None, 
-                 fit_cont_order = 1, fit_window_gui = False, params_windows_gui = True, sigma_min = 30, sigma_max_e = 1200, sigma_max_a = 1500, fit_algorithm = 'leastsq'):
+    def __init__(self, redshift = None, vac_or_air = 'air', seed = 42, n_jobs = -1, folder_name = None, file_name = None, line_select_method = 'gui', input_txt = None, 
+                 fit_cont_order = 1, fit_window_gui = False, params_windows_gui = True, sigma_min = 30, sigma_max_e = 1200, sigma_max_a = 1500, 
+                 fit_algorithm = 'leastsq'):
         """
         Constructor for the line_fitting_exec class that initializes the following class variables:
         
@@ -41,6 +42,8 @@ class line_fitting_exec():
             The speed of light in km/s.
         rng : numpy.random.Generator
             The random number generator.
+        n_jobs: float
+            The number of jobs to run in parallel. Default is -1 (use all processors).
         redshift : float
             The redshift of the galaxy.
         fit_cont_order : float
@@ -62,6 +65,7 @@ class line_fitting_exec():
         # save the seed value and apply to the fitting_model function such that it has the same randomness
         self.seed = seed
         self.rng = np.random.default_rng(self.seed) 
+        self.n_jobs = n_jobs
         if redshift == None:
             self.redshift = 0. # assume it is already rest-frame
         if redshift != None:
@@ -398,7 +402,7 @@ class line_fitting_exec():
         input_arr = (self.velocity_dict, self.flux_v_dict, self.err_v_dict, initial_guess_dict, param_range_dict, self.amps_ratio_dict, self.absorption_lines, 
                      self.broad_wings_lines, self.double_gauss_lines, self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, self.fitting_method, 
                      self.fit_func_choices, self.fit_func_abs_choices, self.sigma_limits, self.fit_algorithm)
-        self.line_fit_model = fitting_model(seed = self.seed)
+        self.line_fit_model = fitting_model(seed = self.seed, n_jobs = self.n_jobs)
         best_model, residual_dict, best_chi2 = self.line_fit_model.fitting_all_lines(input_arr, n_iteration = n_iteration)
         return best_model, residual_dict, best_chi2
 

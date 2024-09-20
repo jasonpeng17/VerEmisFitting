@@ -27,7 +27,7 @@ line_select_method = 'txt'
 # text file for selecting intended lines for fitting
 input_example_txt = current_direc + '/input_txt/line_selection_example.txt' 
 # whether to interactively determine the fitting window, local continuum regions, and masking lines 
-fit_window_gui = True # if False, use the default values 
+fit_window_gui = False # if False, use the default values 
 # whether to pop up the GUI window for interactively determine the initial parameter values and their corresponding ranges (for each iteration). Default is False (i.e., pop up the window)
 params_windows_gui = False # if False, use the default parameter initial values and corresponding ranges for each iteration
 # define the folder name 
@@ -43,10 +43,13 @@ sigma_max_e = 1200 # in km / s
 sigma_max_a = 1500 # in km / s
 # define the algorithm used for fitting (the well-tested ones include ’leastsq’: Levenberg-Marquardt (default), ’nelder’: Nelder-Mead, and ’powell’: Powell)
 fit_algorithm = "leastsq"
+# define the number of jobs to run in parallel. Default is -1 (use all processors).
+n_jobs = -1 # print the number of available CPUs using the cpu_count() function from joblib
 ###############################
-region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, folder_name = folder_name, file_name = file_name, line_select_method = line_select_method, 
-                           input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, params_windows_gui = params_windows_gui,
-                           sigma_min = sigma_min, sigma_max_e = sigma_max_e, sigma_max_a = sigma_max_a, fit_algorithm = fit_algorithm)
+region = line_fitting_exec(redshift = redshift, vac_or_air = vac_or_air, n_jobs = n_jobs, folder_name = folder_name, file_name = file_name, 
+                           line_select_method = line_select_method, input_txt = input_example_txt, fit_cont_order = fit_cont_order, fit_window_gui = fit_window_gui, 
+                           params_windows_gui = params_windows_gui, sigma_min = sigma_min, sigma_max_e = sigma_max_e, sigma_max_a = sigma_max_a, 
+                           fit_algorithm = fit_algorithm)
 
 # "n_iteration" defines the number of iterations you want to run
 # "get_flux = True" defines if you want the return to be the flux dictionary (includes the flux of each line profile) or not; if False, then the return is the best-fitting parameters

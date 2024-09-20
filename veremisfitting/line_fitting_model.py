@@ -16,6 +16,7 @@ from scipy.stats import f
 from astropy.stats import sigma_clip, sigma_clipped_stats
 from termcolor import colored
 from time import time
+from joblib import Parallel, delayed
 
 from veremisfitting.modeling_utils import *
 from veremisfitting.analysis_utils import split_multilet_line, extract_key_parts_from_ratio
@@ -37,11 +38,12 @@ class fitting_model():
     to various emission and absorption lines in spectroscopic data.
     The class provides methods to fit individual and combined line profiles.
     """
-    def __init__(self, seed = 42):
+    def __init__(self, seed = 42, n_jobs = -1):
         """
-        Initialize the class by setting the random number generator.
+        Initialize the class by setting the random number generator and the number of jobs to run in parallel.
         """
-        self.rng = np.random.default_rng(seed) 
+        self.rng = np.random.default_rng(seed)
+        self.n_jobs = n_jobs # default is -1 (use all processors)
 
     def get_broad_amp(self, dict_pars, num, lines, suffix="", with_amp_in_key = False):
         """Helper function to retrieve the broad amplitude based on the num_comp value."""
@@ -385,10 +387,134 @@ class fitting_model():
             self.assign_best(self.x0_e, self.sigma_e, amps, x0_a=self.x0_a, sigma_a=self.sigma_a, x0_b=self.x0_b, sigma_b=self.sigma_b, x0_b2=self.x0_b2, sigma_b2=self.sigma_b2,
                              absorption=True, broad_wing=True, double_gauss=double_gauss, triple_gauss=triple_gauss)
 
+    def parallel_fit_single_run(self, initial_guess_dict, param_range_dict, velocity_dict, flux_v_dict, err_v_dict):
+        """ 
+        Perform a single fit iteration with an updated initial guess. 
+
+        Parameters
+        ----------
+        initial_guess_dict : dict
+            Dictionary for the initial guess values for all line-fitting parameters.
+        param_range_dict : dict
+            Dictionary for the corresponding ranges for each iteration for all line-fitting parameters.
+        velocity_dict : dict
+            Dictionary for the velocity array for each selected line.
+        flux_v_dict : dict
+            Dictionary for the flux array (in velocity space) for each selected line.
+        err_v_dict : dict
+            Dictionary for the error array (in velocity space) for each selected line.
+        
+        Returns
+        -------
+        result: the LMFIT result.
+        """
+        
+        # copy the old initial guess and perturb it
+        initial_guess_dict = {key: value + np.float64((2*self.rng.random(1)-1))*param_range_dict[key] for key, value in initial_guess_dict.items()}
+
+        # create the parameters for fitting
+        self.params = Parameters()
+        # velocity center and width of the narrow emission component
+        self.params.add('center_e', value=initial_guess_dict['v_e'][0], vary = True, min = -200, max = 200)
+        self.params.add('sigma_e', value=initial_guess_dict['v_e'][1], min = self.sigma_min, max = self.sigma_max_e, vary = True)
+        for component in ['b', 'b2', 'a']:
+            # define a max sigma value 
+            sigma_max = self.sigma_max_a if component == 'a' else self.sigma_max_e
+            # set initial values only for other velocity info
+            if f'v_{component}' in initial_guess_dict:
+                self.params.add(f"center_{component}", value=initial_guess_dict[f'v_{component}'][0], min = -200, max = 200,
+                                expr=f"center_e" if not self.vary_dict[component][0] else None)
+
+                if self.double_gauss_broad and (component == 'b'): # check there are any broad velocity components for multi-component models
+                    self.params.add(f"sigma_delta_b", value = initial_guess_dict[f'v_{component}'][1] - initial_guess_dict['v_e'][1], min = 0) 
+                    self.params.add('sigma_b', expr='sigma_e + sigma_delta_b', min=self.sigma_min, max=sigma_max)
+
+                elif self.triple_gauss_broad and (component == 'b2'): # check there are any broad velocity components for triple-component models 
+                    self.params.add(f"sigma_delta_b2", value = initial_guess_dict[f'v_{component}'][1] - initial_guess_dict['v_b'][1], min = 0) 
+                    self.params.add('sigma_b2', expr='sigma_b + sigma_delta_b2', min=self.sigma_min, max=sigma_max)
+
+                elif component == 'a': # the absorption component's velocity width should be always larger than that of the narrow component
+                    self.params.add(f"sigma_delta_a", value = initial_guess_dict[f'v_{component}'][1] - initial_guess_dict['v_e'][1], min = 0)
+                    self.params.add('sigma_a', expr='sigma_e + sigma_delta_a', min=self.sigma_min, max=sigma_max)
+
+                else: # use the default constraints self.sigma_min and sigma_max
+                    self.params.add(f"sigma_{component}", value=initial_guess_dict[f'v_{component}'][1], min=self.sigma_min, max=sigma_max, 
+                                    expr=f"sigma_e" if not self.vary_dict[component][1] else None)
+
+        # set initial values only for amplitude info (free amplitude fitting)
+        for line, initial_guess in initial_guess_dict.items():
+            ion_wave_split = line.split(' ')
+            if len(ion_wave_split) > 1: 
+                # lines that follow fixed amp ratio fitting strategy
+                if any(f"{ion_wave_split[1]}{suffix}" in self.amps_fixed_list for suffix in ["", "_b", "_b2", "_abs"]):
+                    if ion_wave_split[1] in self.amps_fixed_list:
+                        indx_num = self.amps_fixed_list.index(ion_wave_split[1])
+                        if indx_num % 2 != 0:
+                            amp_ratio_indx = int((indx_num + 1) / 2 - 1)
+                            amp_ratio = self.amps_ratio_list[indx_num - 1] # fixed amp ratio between these two lines
+                            self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0], min = 0) # first line 
+                            self.params.add(f"amp_{self.amps_fixed_list[indx_num - 1]}", expr = f"{amp_ratio} * amp_{ion_wave_split[1]}") # second line
+
+                    if (line in self.broad_wings_lines):
+                        # check whether the lines' second velocity component has fixed ratio or not
+                        if f"{ion_wave_split[1]}_b" in self.amps_fixed_list:
+                            indx_num_b = self.amps_fixed_list.index(f"{ion_wave_split[1]}_b")
+                            if indx_num_b % 2 != 0:
+                                amp_ratio_b_indx = int((indx_num_b + 1) / 2 - 1)
+                                amp_ratio_b = self.amps_ratio_list[amp_ratio_b_indx] # fixed amp ratio between these two lines
+                                self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1], min = 0) # first line 
+                                self.params.add(f"amp_{self.amps_fixed_list[indx_num_b - 1]}", expr=f"{amp_ratio_b} * amp_{ion_wave_split[1]}_b") # second line
+                        else:
+                            self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1], min = 0)
+                            
+                    if (line in self.triple_gauss_lines):
+                        # check whether the lines' third velocity component has fixed ratio or not
+                        if f"{ion_wave_split[1]}_b2" in self.amps_fixed_list:
+                            indx_num_b2 = self.amps_fixed_list.index(f"{ion_wave_split[1]}_b2")
+                            if indx_num_b2 % 2 != 0:
+                                amp_ratio_b2_indx = int((indx_num_b2 + 1) / 2 - 1)
+                                amp_ratio_b2 = self.amps_ratio_list[amp_ratio_b2_indx] # fixed amp ratio between these two lines
+                                self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2], min = 0) # first line 
+                                self.params.add(f"amp_{self.amps_fixed_list[indx_num_b2 - 1]}", expr = f"{amp_ratio_b2} * amp_{ion_wave_split[1]}_b2") # second line
+                        else:
+                            self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2], min = 0)
+
+                    if (line in self.absorption_lines):
+                        # check whether the lines' absorption component has fixed ratio or not
+                        if f"{ion_wave_split[1]}_abs" in self.amps_fixed_list:
+                            indx_num_abs = self.amps_fixed_list.index(f"{ion_wave_split[1]}_abs")
+                            if indx_num_abs % 2 != 0:
+                                amp_ratio_abs_indx = int((indx_num_abs + 1) / 2 - 1)
+                                amp_ratio_abs = self.amps_ratio_list[amp_ratio_abs_indx] # fixed amp ratio between these two lines
+                                self.params.add(f"amp_{ion_wave_split[1]}_abs", value=initial_guess[-1], max = 0) # first line 
+                                self.params.add(f"amp_{self.amps_fixed_list[indx_num_abs - 1]}", expr = f"{amp_ratio_abs} * amp_{ion_wave_split[1]}_abs") # second line
+                        else:
+                            self.params.add(f"amp_{ion_wave_split[1]}_abs", value=initial_guess[-1], max = 0)
+
+                # lines that follow free amplitude fitting strategy
+                if any(f"{ion_wave_split[1]}{suffix}" not in self.amps_fixed_list for suffix in ["", "_b", "_b2", "_abs"]):
+                    if ion_wave_split[1] not in self.amps_fixed_list:
+                        self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0], min = 0)
+                    if (line in self.broad_wings_lines) and (f"{ion_wave_split[1]}_b" not in self.amps_fixed_list):
+                        self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1], min = 0)
+                        if (line in self.triple_gauss_lines) and (f"{ion_wave_split[1]}_b2" not in self.amps_fixed_list):
+                            self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2], min = 0)
+                    if (line in self.absorption_lines) and (f"{ion_wave_split[1]}_abs" not in self.amps_fixed_list):
+                        self.params.add(f"amp_{ion_wave_split[1]}_abs", value=initial_guess[-1], max = 0)
+
+        
+        # perform the fit using minimize
+        result = minimize(self.residual_v_f_all, self.params, args=(velocity_dict, flux_v_dict, err_v_dict, self.absorption_lines, self.broad_wings_lines, 
+                                                                    self.double_gauss_lines, self.triple_gauss_lines), method = self.fit_algorithm, 
+                                                                    calc_covar = True, max_nfev=100000)
+        
+        # return the result
+        return result
+
     @timeit
     def fitting_all_lines(self, input_arr, n_iteration = 1000):
         """
-        Fit all intended emission lines in the velocity space using a specified number of iterations.
+        Fit all intended emission lines in the velocity space using parallel computation for a specified number of iterations.
 
         Parameters
         ----------
@@ -396,12 +522,13 @@ class fitting_model():
             A list containing, e.g., velocity_arr, flux_v_arr, err_v_arr, initial_guess, and param_range.
         n_iteration : int, optional
             Number of iterations for fitting, default is 1000.
+        
         Returns
         -------
         best_model (array): The best fitting model found after iterating through the fitting process.
         best_chi2 (float): The reduced chi-squared value corresponding to the best fitting model.
         """
-        # fit all intended emission lines in the velocity space
+        # Unpack the input array
         velocity_dict, flux_v_dict, err_v_dict, initial_guess_dict, param_range_dict, amps_ratio_dict, self.absorption_lines, self.broad_wings_lines, self.double_gauss_lines, \
         self.triple_gauss_lines, self.double_gauss_broad, self.triple_gauss_broad, fitting_method, self.fit_func_choices, self.fit_func_abs_choices, self.sigma_limits, self.fit_algorithm = input_arr
 
@@ -419,124 +546,34 @@ class fitting_model():
         fitting_methods = {'Free fitting': (True, True), 'Fix velocity centroid': (False, True), 'Fix velocity width': (True, False), 
                            'Fix velocity centroid and width': (False, False)}
         vary_center, vary_width = fitting_methods[fitting_method]
-        vary_dict = {'e': (True, True), 'b': (vary_center, vary_width), 'b2': (vary_center, vary_width),  'a': (vary_center, vary_width)}
+        self.vary_dict = {'e': (True, True), 'b': (vary_center, vary_width), 'b2': (vary_center, vary_width),  'a': (vary_center, vary_width)}
 
         # assign the input limits of velocity width of each velocity component
-        sigma_min, sigma_max_e, sigma_max_a = self.sigma_limits
+        self.sigma_min, self.sigma_max_e, self.sigma_max_a = self.sigma_limits
 
-        for i in range(n_iteration):
-            # define the current iteration number
-            self.current_iteration = i + 1
-            # define the input parameters
-            self.params = Parameters()
-            # velocity center and width of the narrow emission component
-            self.params.add('center_e', value=initial_guess_dict['v_e'][0], vary = True, min = -200, max = 200)
-            self.params.add('sigma_e', value=initial_guess_dict['v_e'][1], min = sigma_min, max = sigma_max_e, vary = True)
-            for component in ['b', 'b2', 'a']:
-                # define a max sigma value 
-                sigma_max = sigma_max_a if component == 'a' else sigma_max_e
-                # set initial values only for other velocity info
-                if f'v_{component}' in initial_guess_dict:
-                    self.params.add(f"center_{component}", value=initial_guess_dict[f'v_{component}'][0], min = -200, max = 200,
-                                    expr=f"center_e" if not vary_dict[component][0] else None)
+        # generate parallel jobs for the fitting process using joblib
+        results = Parallel(n_jobs=self.n_jobs)(
+            delayed(self.parallel_fit_single_run)(
+                initial_guess_dict_old, param_range_dict, velocity_dict, flux_v_dict, err_v_dict
+            ) for i in range(n_iteration)
+        )
 
-                    if self.double_gauss_broad and (component == 'b'): # check there are any broad velocity components for multi-component models
-                        self.params.add(f"sigma_delta_b", value = initial_guess_dict[f'v_{component}'][1] - initial_guess_dict['v_e'][1], min = 0) 
-                        self.params.add('sigma_b', expr='sigma_e + sigma_delta_b', min=sigma_min, max=sigma_max)
+        # extract the list of redchi values, keeping track of the index
+        redchi_values = np.array([res.redchi for res in results])
+        # get the index of the best result (smallest redchi value)
+        best_index = np.nanargmin(redchi_values)
+        # set the best result
+        self.result = results[best_index]
+        # extract the best-fitting parameter dict
+        self.param_dict = self.result.params.valuesdict()
+        # collect amplitude values
+        self.amps = {key.replace('amp_', ''): value for key, value in self.param_dict.items() if 'amp' in key}
+        # define the current iteration number based on the best result's index
+        self.current_iteration = best_index + 1
 
-                    elif self.triple_gauss_broad and (component == 'b2'): # check there are any broad velocity components for triple-component models 
-                        self.params.add(f"sigma_delta_b2", value = initial_guess_dict[f'v_{component}'][1] - initial_guess_dict['v_b'][1], min = 0) 
-                        self.params.add('sigma_b2', expr='sigma_b + sigma_delta_b2', min=sigma_min, max=sigma_max)
-
-                    elif component == 'a': # the absorption component's velocity width should be always larger than that of the narrow component
-                        self.params.add(f"sigma_delta_a", value = initial_guess_dict[f'v_{component}'][1] - initial_guess_dict['v_e'][1], min = 0)
-                        self.params.add('sigma_a', expr='sigma_e + sigma_delta_a', min=sigma_min, max=sigma_max)
-
-                    else: # use the default constraints sigma_min and sigma_max
-                        self.params.add(f"sigma_{component}", value=initial_guess_dict[f'v_{component}'][1], min=sigma_min, max=sigma_max, 
-                                        expr=f"sigma_e" if not vary_dict[component][1] else None)
-
-            # set initial values only for amplitude info (free amplitude fitting)
-            for line, initial_guess in initial_guess_dict.items():
-                ion_wave_split = line.split(' ')
-                if len(ion_wave_split) > 1: 
-                    # lines that follow fixed amp ratio fitting strategy
-                    if any(f"{ion_wave_split[1]}{suffix}" in self.amps_fixed_list for suffix in ["", "_b", "_b2", "_abs"]):
-                        if ion_wave_split[1] in self.amps_fixed_list:
-                            indx_num = self.amps_fixed_list.index(ion_wave_split[1])
-                            if indx_num % 2 != 0:
-                                amp_ratio_indx = int((indx_num + 1) / 2 - 1)
-                                amp_ratio = self.amps_ratio_list[indx_num - 1] # fixed amp ratio between these two lines
-                                self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0], min = 0) # first line 
-                                self.params.add(f"amp_{self.amps_fixed_list[indx_num - 1]}", expr = f"{amp_ratio} * amp_{ion_wave_split[1]}") # second line
-
-                        if (line in self.broad_wings_lines):
-                            # check whether the lines' second velocity component has fixed ratio or not
-                            if f"{ion_wave_split[1]}_b" in self.amps_fixed_list:
-                                indx_num_b = self.amps_fixed_list.index(f"{ion_wave_split[1]}_b")
-                                if indx_num_b % 2 != 0:
-                                    amp_ratio_b_indx = int((indx_num_b + 1) / 2 - 1)
-                                    amp_ratio_b = self.amps_ratio_list[amp_ratio_b_indx] # fixed amp ratio between these two lines
-                                    self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1], min = 0) # first line 
-                                    self.params.add(f"amp_{self.amps_fixed_list[indx_num_b - 1]}", expr=f"{amp_ratio_b} * amp_{ion_wave_split[1]}_b") # second line
-                            else:
-                                self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1], min = 0)
-                                
-                        if (line in self.triple_gauss_lines):
-                            # check whether the lines' third velocity component has fixed ratio or not
-                            if f"{ion_wave_split[1]}_b2" in self.amps_fixed_list:
-                                indx_num_b2 = self.amps_fixed_list.index(f"{ion_wave_split[1]}_b2")
-                                if indx_num_b2 % 2 != 0:
-                                    amp_ratio_b2_indx = int((indx_num_b2 + 1) / 2 - 1)
-                                    amp_ratio_b2 = self.amps_ratio_list[amp_ratio_b2_indx] # fixed amp ratio between these two lines
-                                    self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2], min = 0) # first line 
-                                    self.params.add(f"amp_{self.amps_fixed_list[indx_num_b2 - 1]}", expr = f"{amp_ratio_b2} * amp_{ion_wave_split[1]}_b2") # second line
-                            else:
-                                self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2], min = 0)
-
-                        if (line in self.absorption_lines):
-                            # check whether the lines' absorption component has fixed ratio or not
-                            if f"{ion_wave_split[1]}_abs" in self.amps_fixed_list:
-                                indx_num_abs = self.amps_fixed_list.index(f"{ion_wave_split[1]}_abs")
-                                if indx_num_abs % 2 != 0:
-                                    amp_ratio_abs_indx = int((indx_num_abs + 1) / 2 - 1)
-                                    amp_ratio_abs = self.amps_ratio_list[amp_ratio_abs_indx] # fixed amp ratio between these two lines
-                                    self.params.add(f"amp_{ion_wave_split[1]}_abs", value=initial_guess[-1], max = 0) # first line 
-                                    self.params.add(f"amp_{self.amps_fixed_list[indx_num_abs - 1]}", expr = f"{amp_ratio_abs} * amp_{ion_wave_split[1]}_abs") # second line
-                            else:
-                                self.params.add(f"amp_{ion_wave_split[1]}_abs", value=initial_guess[-1], max = 0)
-
-                    # lines that follow free amplitude fitting strategy
-                    if any(f"{ion_wave_split[1]}{suffix}" not in self.amps_fixed_list for suffix in ["", "_b", "_b2", "_abs"]):
-                        if ion_wave_split[1] not in self.amps_fixed_list:
-                            self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0], min = 0)
-                        if (line in self.broad_wings_lines) and (f"{ion_wave_split[1]}_b" not in self.amps_fixed_list):
-                            self.params.add(f"amp_{ion_wave_split[1]}_b", value=initial_guess[1], min = 0)
-                            if (line in self.triple_gauss_lines) and (f"{ion_wave_split[1]}_b2" not in self.amps_fixed_list):
-                                self.params.add(f"amp_{ion_wave_split[1]}_b2", value=initial_guess[2], min = 0)
-                        if (line in self.absorption_lines) and (f"{ion_wave_split[1]}_abs" not in self.amps_fixed_list):
-                            self.params.add(f"amp_{ion_wave_split[1]}_abs", value=initial_guess[-1], max = 0)
-
-            # obtain the best result of this iteration
-            self.result = minimize(self.residual_v_f_all, self.params, args=(velocity_dict, flux_v_dict, err_v_dict, self.absorption_lines, self.broad_wings_lines, 
-                                                                             self.double_gauss_lines, self.triple_gauss_lines), method = self.fit_algorithm, calc_covar = True, 
-                                                                             max_nfev=100000)
-            self.param_dict = self.result.params.valuesdict()
-
-            # collect amplitude values
-            self.amps = {key.replace('amp_', ''): value for key, value in self.param_dict.items() if 'amp' in key}
-               
-            try:
-                if (self.best_chi2 > self.result.redchi):
-                    # print and assign the best-fitting parameters (and also print the best chi2 value)
-                    self.check_and_assign_best(self.amps, absorption=bool(self.absorption_lines), broad_wing=bool(self.broad_wings_lines),
-                                               double_gauss=bool(self.double_gauss_lines), triple_gauss=bool(self.triple_gauss_lines))
-            except (UnboundLocalError, NameError, AttributeError) as e:
-                # print and assign the best-fitting parameters (and also print the best chi2 value)
-                self.check_and_assign_best(self.amps, absorption=bool(self.absorption_lines), broad_wing=bool(self.broad_wings_lines),
-                                           double_gauss=bool(self.double_gauss_lines), triple_gauss=bool(self.triple_gauss_lines))
-            # update the initial guess dict based on the parameter range dict
-            initial_guess_dict = {key: value + np.float64((2*self.rng.random(1)-1))*param_range_dict[key] for key, value in initial_guess_dict_old.items()}
+        # finalize the model based on the best parameters
+        self.check_and_assign_best(self.amps, absorption=bool(self.absorption_lines), broad_wing=bool(self.broad_wings_lines),
+                                   double_gauss=bool(self.double_gauss_lines), triple_gauss=bool(self.triple_gauss_lines))
 
         ################# Start: obtain the best-fitting model for each line #################
         # initialize dicts for saving models for multiple emission components
@@ -928,5 +965,4 @@ class fitting_model():
             self.params_num_dict[line] = len(params_line)
         ################# End: obtain the best-fitting model for each line #################
         return (self.best_model, self.residual_dict, self.best_chi2)
-
 
