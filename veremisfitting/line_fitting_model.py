@@ -466,7 +466,7 @@ class fitting_model():
                             indx_num = self.amps_fixed_list.index(ion_wave_split[1])
                             if indx_num % 2 != 0:
                                 amp_ratio_indx = int((indx_num + 1) / 2 - 1)
-                                amp_ratio = self.amps_ratio_list[indx_num - 1] # fixed amp ratio between these two lines
+                                amp_ratio = self.amps_ratio_list[amp_ratio_indx] # fixed amp ratio between these two lines
                                 self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0], min = 0) # first line 
                                 self.params.add(f"amp_{self.amps_fixed_list[indx_num - 1]}", expr = f"{amp_ratio} * amp_{ion_wave_split[1]}") # second line
 
