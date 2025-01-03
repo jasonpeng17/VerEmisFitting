@@ -1,6 +1,19 @@
 # README file
 
-### Please refer to the `Versatile_Emission_Line_Fitting_Package_Guideline.pdf` in the `doc` folder for more details. Below are the key steps for installation and execution. 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13782314.svg)](https://doi.org/10.5281/zenodo.13782314)
+
+## Introduction 
+
+**VerEmisFitting** is a Python-based tool for fitting and analyzing emission lines in astronomical spectra. 
+
+**Key Features**:
+
+* Emission-line fittings: Users can simultaneously fit multiple emission lines using up to three velocity components per line in velocity space. 
+* Interactive interface: This includes a graphical user interface that allows users to select emission lines to fit interactively, enhancing usability and customization. Users can also interactively define the line-fitting window, set local-continuum regions, and mask spectral regions.
+* Customizable Parameters: Allows users to define initial parameter values and fitting ranges, offering flexibility to accommodate diverse datasets and research needs.
+* Comprehensive Output: Generates detailed outputs, including flux tables, equivalent width tables, parameter tables, and fitting plots, aiding in thorough data interpretation.
+
+Please refer to the `Versatile_Emission_Line_Fitting_Package_Guideline.pdf` in the `doc` folder for more details. Below are the key steps for installation and execution. 
 
 ## Installation
 
@@ -140,7 +153,7 @@ After adding a particular line to both wavelength files, users should also add t
 7. **(Optional) Potential Application to IFU Data**: Importing the VerEmisFitting package for fitting spectra extracted from IFU data can be time-consuming and redundant, as it requires repeatedly clicking buttons in every pop-up GUI for each spectrum. Therefore, it is recommended to set `line_select_method = 'txt'`, `fit_window_gui = False`, and `params_window_gui = False`. The first two parameters are illustrated in the previous steps. The last parameter (`params_window_gui`) controls whether to interactively determine the initial values and ranges of parameters for each iteration. With this setup, no interactive GUI will pop up; thus, it is essential to ensure that the default configuration adequately fits your data. For each extracted spectrum from the IFU data cube, it is recommended to assign a unique folder name, `folder_name`, or file name, `file_name`, within the `line_fitting_exec` class to ensure the saved products are uniquely named. If the local continuum regions or the masked regions differ significantly across these extracted spectra, assigning a unique `folder_name` for each spectrum is recommended. This approach is preferred because the program is designed to find unique `cont_dir` and `lmsk_dir` folders with each respective spectrum. **An example that applies this pipeline to IFU data can be found in the `ifu_example.py` script located in the `veremisfitting/ifu_apps_examples` folder.**
 
 ## Citation
-If you utilize VerEmisFitting in your research, please cite Peng et al. (2024, submitted to ApJ). A link to the publication will be provided upon its release.
+If you utilize VerEmisFitting in your research, please cite [Peng et al. (2024)](https://arxiv.org/abs/2412.05371) published on the *Astrophysical Journal*.
 
 ## Contact
 VerEmisFitting is developed and maintained by [Zixuan Peng](mailto:zixuanpeng@ucsb.edu) and [Yuan Li](mailto:yuanli@tamu.edu). For bug reports, questions, or feature requests, please contact us via email.
