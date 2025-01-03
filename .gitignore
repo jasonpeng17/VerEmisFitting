@@ -147,3 +147,9 @@ cython_debug/
 
 # vscode
 .vscode/
+cont_tables/**/*.csv
+ew_tables/**/*.csv
+flux_tables/**/*.csv
+parameter_tables/**/*.csv
+stats_tables/**/*.csv
+plots/**/*.pdf

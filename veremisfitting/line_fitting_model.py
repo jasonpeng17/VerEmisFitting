@@ -40,9 +40,9 @@ class fitting_model():
     """
     def __init__(self, seed = 42, n_jobs = -1):
         """
-        Initialize the class by setting the random number generator and the number of jobs to run in parallel.
+        Initialize the class by setting the base seed and the number of jobs to run in parallel.
         """
-        self.rng = np.random.default_rng(seed)
+        self.base_seed = seed
         self.n_jobs = n_jobs # default is -1 (use all processors)
 
     def get_broad_amp(self, dict_pars, num, lines, suffix="", with_amp_in_key = False):
@@ -387,7 +387,7 @@ class fitting_model():
             self.assign_best(self.x0_e, self.sigma_e, amps, x0_a=self.x0_a, sigma_a=self.sigma_a, x0_b=self.x0_b, sigma_b=self.sigma_b, x0_b2=self.x0_b2, sigma_b2=self.sigma_b2,
                              absorption=True, broad_wing=True, double_gauss=double_gauss, triple_gauss=triple_gauss)
 
-    def parallel_fit_single_run(self, initial_guess_dict, param_range_dict, velocity_dict, flux_v_dict, err_v_dict):
+    def parallel_fit_single_run(self, initial_guess_dict, param_range_dict, velocity_dict, flux_v_dict, err_v_dict, seed):
         """ 
         Perform a single fit iteration with an updated initial guess. 
 
@@ -408,6 +408,8 @@ class fitting_model():
         -------
         result: the LMFIT result.
         """
+        # Initialize the random number generator with a certain seed number
+        self.rng = np.random.default_rng(seed)
         
         # copy the old initial guess and perturb it
         initial_guess_dict = {key: value + np.float64((2*self.rng.random(1)-1))*param_range_dict[key] for key, value in initial_guess_dict.items()}
@@ -451,7 +453,7 @@ class fitting_model():
                         indx_num = self.amps_fixed_list.index(ion_wave_split[1])
                         if indx_num % 2 != 0:
                             amp_ratio_indx = int((indx_num + 1) / 2 - 1)
-                            amp_ratio = self.amps_ratio_list[indx_num - 1] # fixed amp ratio between these two lines
+                            amp_ratio = self.amps_ratio_list[amp_ratio_indx] # fixed amp ratio between these two lines
                             self.params.add(f"amp_{ion_wave_split[1]}", value=initial_guess[0], min = 0) # first line 
                             self.params.add(f"amp_{self.amps_fixed_list[indx_num - 1]}", expr = f"{amp_ratio} * amp_{ion_wave_split[1]}") # second line
 
@@ -554,7 +556,7 @@ class fitting_model():
         # generate parallel jobs for the fitting process using joblib
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(self.parallel_fit_single_run)(
-                initial_guess_dict_old, param_range_dict, velocity_dict, flux_v_dict, err_v_dict
+                initial_guess_dict_old, param_range_dict, velocity_dict, flux_v_dict, err_v_dict, self.base_seed + i # assign unique seed for each iteration (for reproducible results)
             ) for i in range(n_iteration)
         )
 
